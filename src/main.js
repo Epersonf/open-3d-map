@@ -106,3 +106,35 @@ ipcMain.handle('save-project', async (event, { projectPath, projectData }) => {
     throw error
   }
 })
+ipcMain.handle('list-assets', async (event, projectPath) => {
+  try {
+    const assetsFolder = path.join(projectPath, 'assets')
+    
+    // Check if assets folder exists
+    if (!fsSync.existsSync(assetsFolder)) {
+      return []
+    }
+
+    // Read directory contents
+    const files = await fs.readdir(assetsFolder, { withFileTypes: true })
+    
+    const assets = await Promise.all(
+      files.map(async (file) => {
+        const filePath = path.join(assetsFolder, file.name)
+        const stat = await fs.stat(filePath)
+        return {
+          name: file.name,
+          path: filePath,
+          type: file.isDirectory() ? 'folder' : 'file',
+          size: file.isFile() ? stat.size : undefined,
+          modified: stat.mtime.toISOString()
+        }
+      })
+    )
+
+    return assets
+  } catch (error) {
+    console.error('Error listing assets:', error)
+    throw error
+  }
+})

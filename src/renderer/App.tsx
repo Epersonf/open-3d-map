@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Toolbar from './presentation/components/toolbar/Toolbar'
 import { Inspector } from './presentation/components/inspector'
+import { FileExplorer } from './presentation/components/file-explorer'
 import StoresProvider, { useStores } from './stores'
 import CreateProjectDialog from './presentation/components/dialogs/create-project-dialog/CreateProjectDialog'
 import './app-layout.css'
@@ -31,6 +32,9 @@ function AppContent() {
         <aside className="app-inspector">
           <Inspector />
         </aside>
+      </div>
+      <div className="file-explorer-panel">
+        <FileExplorer />
       </div>
     </>
   )

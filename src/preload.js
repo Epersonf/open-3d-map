@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('create-project', { projectName, projectPath }),
   loadProject: (projectPath) => ipcRenderer.invoke('load-project', projectPath),
   saveProject: (projectPath, projectData) =>
-    ipcRenderer.invoke('save-project', { projectPath, projectData })
+    ipcRenderer.invoke('save-project', { projectPath, projectData }),
+
+  // Assets management
+  listAssets: (projectPath) => ipcRenderer.invoke('list-assets', projectPath)
 })
