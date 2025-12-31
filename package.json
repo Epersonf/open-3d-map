@@ -6,14 +6,17 @@
   "scripts": {
     "dev:renderer": "webpack serve --config webpack.renderer.config.js --mode development",
     "dev:electron": "electron .",
-    "dev": "concurrently \"npm:dev:renderer\" \"wait-on http://localhost:3000 && npm:dev:electron\"",
+    "dev": "concurrently \"npm:dev:renderer\" \"wait-on http://localhost:3000 && electron .\"",
     "build:renderer": "webpack --config webpack.renderer.config.js --mode production",
     "build": "npm run build:renderer",
     "start": "electron ."
   },
   "dependencies": {
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "react-icons": "^4.10.1",
+    "mobx": "^6.9.0",
+    "mobx-react-lite": "^3.4.0"
   },
   "devDependencies": {
     "webpack": "^5.88.0",
