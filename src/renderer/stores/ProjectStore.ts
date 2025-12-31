@@ -15,8 +15,7 @@ export class ProjectStore {
     this.error = undefined
     try {
       // If no path provided, ask main process to select a folder
-      const folder =
-        path || (window as any).electronAPI?.selectProjectFolder?.() || undefined
+      const folder = path || (await (window as any).electronAPI?.openProjectDialog?.())
 
       if (!folder) {
         runInAction(() => {
@@ -25,9 +24,8 @@ export class ProjectStore {
         return
       }
 
-      // Try to read index.json via Electron API (if available)
-      const json =
-        (await (window as any).electronAPI?.readIndexJson?.(folder)) || null
+      // Load index.json from the folder
+      const json = await (window as any).electronAPI?.loadProject?.(folder)
 
       runInAction(() => {
         this.currentProjectPath = folder
@@ -36,24 +34,72 @@ export class ProjectStore {
       })
     } catch (e: any) {
       runInAction(() => {
-        this.error = String(e)
+        this.error = String(e?.message || e)
         this.loading = false
       })
     }
   }
 
-  async createNewProject(path: string, name: string) {
+  async createNewProject(projectName?: string, basePath?: string) {
     this.loading = true
+    this.error = undefined
     try {
-      const created = await (window as any).electronAPI?.createProject?.(path, name)
+      // Use provided name or abort if not given
+      if (!projectName || !projectName.trim()) {
+        runInAction(() => {
+          this.error = 'Project name is required'
+          this.loading = false
+        })
+        return
+      }
+
+      // Ask user to select base folder for the project
+      let folderPath = basePath
+      if (!folderPath) {
+        folderPath = await (window as any).electronAPI?.openProjectDialog?.()
+        if (!folderPath) {
+          runInAction(() => { this.loading = false })
+          return
+        }
+      }
+
+      // Create the project via Electron API
+      const projectFolder = await (window as any).electronAPI?.createProject?.(projectName, folderPath)
+
+      if (projectFolder) {
+        // Load the newly created project
+        const json = await (window as any).electronAPI?.loadProject?.(projectFolder)
+
+        runInAction(() => {
+          this.currentProjectPath = projectFolder
+          this.projectData = json
+          this.loading = false
+        })
+      }
+    } catch (e: any) {
       runInAction(() => {
-        this.currentProjectPath = created || path
-        this.projectData = null
+        this.error = String(e?.message || e)
+        this.loading = false
+      })
+    }
+  }
+
+  async saveProject() {
+    if (!this.currentProjectPath || !this.projectData) {
+      this.error = 'No project loaded to save'
+      return
+    }
+
+    this.loading = true
+    this.error = undefined
+    try {
+      await (window as any).electronAPI?.saveProject?.(this.currentProjectPath, this.projectData)
+      runInAction(() => {
         this.loading = false
       })
     } catch (e: any) {
       runInAction(() => {
-        this.error = String(e)
+        this.error = String(e?.message || e)
         this.loading = false
       })
     }
