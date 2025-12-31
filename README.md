@@ -1,80 +1,45 @@
-# 3D Level Editor
+# Electron + React (básico)
 
-A professional desktop application for creating and editing 3D game levels, built with Next.js, Electron, Three.js, and MobX following Domain-Driven Design principles.
+Todos os sources estão na pasta `src`.
 
-## Features
+Pré-requisitos
 
-- **3D Viewport** with orbit controls and transform gizmos
-- **Hierarchy Panel** for managing scene objects with drag-and-drop
-- **Inspector Panel** for editing object properties and transforms
-- **Project Management** with file system integration via Electron
-- **Transform Tools** (Translate, Rotate, Scale) with local/global space
-- **Tag System** for flexible object metadata
-- **Interoperable JSON Format** for cross-engine compatibility
+- Node.js (>=18 recomendado)
 
-## Architecture
-
-The application follows a clean DDD architecture with clear separation:
-
-- **Domain Layer**: Pure entities (Project, Scene, GameObject, Transform)
-- **Application Layer**: Services and use cases
-- **Infrastructure Layer**: Adapters for Three.js, file system, and state management
-- **Presentation Layer**: React components with MobX for reactivity
-
-## Getting Started
-
-### Development
+Instalação
 
 ```bash
-# Install dependencies
 npm install
+```
 
-# Run Next.js dev server
-npm run dev:next
+Modo desenvolvimento (abre webpack-dev-server + Electron):
 
-# In another terminal, run Electron
-npm run dev:electron
-
-# Or run both concurrently
+```bash
 npm run dev
 ```
 
-### Building
+- Esse script usa `concurrently` e `wait-on` para iniciar o dev server do webpack e, em seguida, o Electron.
+
+Build (renderer com webpack):
 
 ```bash
-# Build Next.js app
 npm run build
-
-# Package Electron app for distribution
-npm run build:electron
 ```
 
-## Project Structure
+Iniciar (após build):
 
-```
-├── app/                    # Next.js app directory
-├── components/
-│   └── editor/            # Editor UI components
-├── electron/              # Electron main process
-├── lib/
-│   ├── domain/           # Domain entities
-│   ├── application/      # Services and use cases
-│   ├── infrastructure/   # Adapters and repositories
-│   ├── rendering/        # Three.js rendering
-│   └── stores/           # MobX stores
-└── types/                # TypeScript definitions
+```bash
+npm start
 ```
 
-## Technology Stack
+Estrutura importante
 
-- **Next.js 16** - React framework with App Router
-- **Electron 39** - Desktop application framework
-- **Three.js 0.182** - 3D rendering engine
-- **MobX 6** - Reactive state management
-- **TypeScript** - Type safety
-- **Tailwind CSS v4** - Styling
-- **shadcn/ui** - UI components
+- `src/main.js` — processo principal do Electron
+- `src/preload.js` — preload script (contextBridge)
+- `src/renderer` — app React (tudo dentro de `SRC`)
+- `vite.config.cjs` — configuração do Vite apontando para `src/renderer`
 
-## License
+Observações
 
-MIT
+- Para empacotar a aplicação (installer), recomendo adicionar e configurar `electron-builder` ou `electron-forge` conforme sua necessidade.
+- Se preferir, posso ajustar para TypeScript ou adicionar empacotamento automático.
