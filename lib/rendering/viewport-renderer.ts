@@ -1,6 +1,5 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
-import { TransformControls } from "three/examples/jsm/controls/TransformControls.js"
 import { ThreeSceneAdapter } from "@/lib/infrastructure/adapters/three-scene-adapter"
 import type { ViewportStore } from "@/lib/stores/viewport-store"
 import type { SelectionStore } from "@/lib/stores/selection-store"
@@ -10,7 +9,7 @@ export class ViewportRenderer {
   private scene: THREE.Scene
   private camera: THREE.PerspectiveCamera
   private orbitControls: OrbitControls
-  private transformControls: TransformControls
+  private transformControls: any | null = null
   private sceneAdapter: ThreeSceneAdapter
   private raycaster: THREE.Raycaster
   private mouse: THREE.Vector2
@@ -48,12 +47,8 @@ export class ViewportRenderer {
     this.orbitControls.enableDamping = true
     this.orbitControls.dampingFactor = 0.05
 
-    // Setup transform controls
-    this.transformControls = new TransformControls(this.camera, this.renderer.domElement)
-    this.transformControls.addEventListener("dragging-changed", (event) => {
-      this.orbitControls.enabled = !event.value
-    })
-    this.scene.add(this.transformControls)
+    // Setup transform controls (dynamically import to avoid bundler/runtime issues)
+    this.loadTransformControls()
 
     // Setup scene adapter
     this.sceneAdapter = new ThreeSceneAdapter()
@@ -71,6 +66,83 @@ export class ViewportRenderer {
 
     // Handle window resize
     window.addEventListener("resize", this.handleResize)
+  }
+
+  private async loadTransformControls() {
+    try {
+      const mod = await import("three/examples/jsm/controls/TransformControls.js")
+      const anyMod = mod as any
+
+      // Handle different module export patterns
+      let TransformControls: any = anyMod.TransformControls ?? anyMod.default ?? anyMod
+
+      if (!TransformControls) {
+        // eslint-disable-next-line no-console
+        console.error("TransformControls not found in module:", Object.keys(mod), mod)
+        // Try fallback to our simple implementation
+        try {
+          const fallback = await import("./simple-transform-controls")
+          const SimpleTransformControls = (fallback as any).SimpleTransformControls ?? (fallback as any).default
+          if (SimpleTransformControls) {
+            const instance = new SimpleTransformControls(this.camera, this.renderer.domElement)
+            this.transformControls = instance
+            this.transformControls.addEventListener("dragging-changed", (event: any) => {
+              this.orbitControls.enabled = !event.value
+            })
+            this.scene.add(this.transformControls)
+            return
+          }
+        } catch (fallbackErr) {
+          // eslint-disable-next-line no-console
+          console.warn("Fallback SimpleTransformControls not available:", fallbackErr)
+        }
+
+        this.transformControls = null
+        return
+      }
+
+      let instance: any = null
+
+      // If it's a constructor, try to instantiate it
+      if (typeof TransformControls === "function") {
+        try {
+          instance = new TransformControls(this.camera, this.renderer.domElement)
+        } catch (err) {
+          // Could not construct — log and fallthrough to treat as instance
+          // eslint-disable-next-line no-console
+          console.warn("TransformControls constructor threw, will treat export as instance if possible:", err)
+          instance = null
+        }
+      } else if (typeof TransformControls === "object") {
+        instance = TransformControls
+      }
+
+      const looksLikeObject3D = instance && (typeof instance.add === "function" || typeof instance.attach === "function" || typeof instance.updateMatrixWorld === "function")
+
+      if (looksLikeObject3D) {
+        this.transformControls = instance
+        this.transformControls.addEventListener("dragging-changed", (event: any) => {
+          this.orbitControls.enabled = !event.value
+        })
+        try {
+          this.scene.add(this.transformControls)
+        } catch (err) {
+          // Adding failed likely due to cross-`three` instanceof checks. Log and continue without controls.
+          // eslint-disable-next-line no-console
+          console.warn("Could not add TransformControls to scene (possible multiple three instances):", err)
+          this.transformControls = null
+        }
+      } else {
+        // eslint-disable-next-line no-console
+        console.error("TransformControls is not a recognizable Object3D instance. Module keys:", Object.keys(mod), { TransformControlsType: typeof TransformControls, instance, mod })
+        this.transformControls = null
+      }
+    } catch (err) {
+      // Fail gracefully and log for debugging
+      // eslint-disable-next-line no-console
+      console.error("Failed to load TransformControls:", err)
+      this.transformControls = null
+    }
   }
 
   private setupLighting() {
@@ -129,7 +201,9 @@ export class ViewportRenderer {
       }
     } else {
       this.selectionStore.clearSelection()
-      this.transformControls.detach()
+      if (this.transformControls) {
+        this.transformControls.detach()
+      }
     }
   }
 
@@ -154,12 +228,16 @@ export class ViewportRenderer {
   private observeViewportStore() {
     // React to transform mode changes
     const updateMode = () => {
-      this.transformControls.setMode(this.viewportStore.transformMode)
+      if (this.transformControls) {
+        this.transformControls.setMode(this.viewportStore.transformMode)
+      }
     }
 
     // React to transform space changes
     const updateSpace = () => {
-      this.transformControls.setSpace(this.viewportStore.transformSpace === "global" ? "world" : "local")
+      if (this.transformControls) {
+        this.transformControls.setSpace(this.viewportStore.transformSpace === "global" ? "world" : "local")
+      }
     }
 
     // Set initial values
@@ -173,14 +251,16 @@ export class ViewportRenderer {
   private updateTransformControls() {
     const selectedIds = this.selectionStore.selectedObjects
     if (selectedIds.length === 0) {
-      this.transformControls.detach()
+      if (this.transformControls) {
+        this.transformControls.detach()
+      }
       return
     }
 
     const selectedId = selectedIds[0]
     const threeObj = this.sceneAdapter.getThreeObject(selectedId)
 
-    if (threeObj) {
+    if (threeObj && this.transformControls) {
       this.transformControls.attach(threeObj)
       this.transformControls.setMode(this.viewportStore.transformMode)
       this.transformControls.setSpace(this.viewportStore.transformSpace === "global" ? "world" : "local")
@@ -198,19 +278,23 @@ export class ViewportRenderer {
     this.orbitControls.update()
 
     // Update transform controls mode/space if changed
-    this.transformControls.setMode(this.viewportStore.transformMode)
-    this.transformControls.setSpace(this.viewportStore.transformSpace === "global" ? "world" : "local")
+    if (this.transformControls) {
+      this.transformControls.setMode(this.viewportStore.transformMode)
+      this.transformControls.setSpace(this.viewportStore.transformSpace === "global" ? "world" : "local")
+    }
 
     // Update transform controls attachment if selection changed
     const selectedIds = this.selectionStore.selectedObjects
     if (selectedIds.length > 0) {
-      const currentAttached = this.transformControls.object
-      const shouldBeAttached = this.sceneAdapter.getThreeObject(selectedIds[0])
+      if (this.transformControls) {
+        const currentAttached = this.transformControls.object
+        const shouldBeAttached = this.sceneAdapter.getThreeObject(selectedIds[0])
 
-      if (currentAttached !== shouldBeAttached) {
-        this.updateTransformControls()
+        if (currentAttached !== shouldBeAttached) {
+          this.updateTransformControls()
+        }
       }
-    } else if (this.transformControls.object) {
+    } else if (this.transformControls && this.transformControls.object) {
       this.transformControls.detach()
     }
 
@@ -234,7 +318,9 @@ export class ViewportRenderer {
     this.renderer.domElement.removeEventListener("mousemove", this.handleMouseMove)
 
     this.orbitControls.dispose()
-    this.transformControls.dispose()
+    if (this.transformControls) {
+      this.transformControls.dispose()
+    }
     this.renderer.dispose()
   }
 }

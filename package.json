@@ -8,8 +8,8 @@
   "scripts": {
     "build": "next build",
     "build:electron": "electron-builder",
-    "dev": "concurrently \"next dev\" \"cross-env NODE_ENV=development electron electron/main.js\"",
-    "dev:electron": "cross-env NODE_ENV=development electron electron/main.js",
+    "dev": "concurrently -n \"NEXT,ELECTRON\" -c \"green,blue\" \"next dev\" \"cross-env NODE_ENV=development electron .\"",
+    "dev:electron": "cross-env NODE_ENV=development electron .",
     "dev:next": "next dev",
     "lint": "eslint .",
     "package": "npm run build && electron-builder",

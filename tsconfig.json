@@ -22,6 +22,7 @@
         "name": "next"
       }
     ],
+    "types": ["electron", "node"],
     "paths": {
       "@/*": [
         "./*"
@@ -34,6 +35,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "electron/**/*.ts",
+    "types/**/*.d.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

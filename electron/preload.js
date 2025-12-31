@@ -1,13 +1,14 @@
-import { contextBridge, ipcRenderer } from "electron"
+const { contextBridge, ipcRenderer } = require('electron')
 
-contextBridge.exposeInMainWorld("electronAPI", {
+// Expose a safe API to the renderer
+contextBridge.exposeInMainWorld('electronAPI', {
   project: {
-    create: (path, data) => ipcRenderer.invoke("project:create", path, data),
-    open: () => ipcRenderer.invoke("project:open"),
-    save: (path, data) => ipcRenderer.invoke("project:save", path, data),
-    saveAs: (data) => ipcRenderer.invoke("project:saveAs", data),
+    create: (path, data) => ipcRenderer.invoke('project:create', path, data),
+    open: () => ipcRenderer.invoke('project:open'),
+    save: (path, data) => ipcRenderer.invoke('project:save', path, data),
+    saveAs: (data) => ipcRenderer.invoke('project:saveAs', data),
   },
   asset: {
-    import: () => ipcRenderer.invoke("asset:import"),
+    import: () => ipcRenderer.invoke('asset:import'),
   },
 })
