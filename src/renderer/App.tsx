@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import Toolbar from './presentation/components/toolbar/Toolbar'
 import StoresProvider, { useStores } from './stores'
-import { CreateProjectDialog } from './presentation/components/dialogs'
+import CreateProjectDialog from './presentation/components/dialogs/create-project-dialog/CreateProjectDialog'
 
 function AppContent() {
   const { projectStore } = useStores()

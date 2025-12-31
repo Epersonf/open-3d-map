@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import './dialogs.css'
+import './create-project-dialog.css'
 
 export interface CreateProjectDialogProps {
   isOpen: boolean
