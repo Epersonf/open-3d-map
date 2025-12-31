@@ -1,0 +1,36 @@
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  color: #fff;
+}
+
+.app h1 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+}
+
+.app p {
+  margin: 0;
+  color: #aaa;
+}
+
+.app-inspector {
+  flex-shrink: 0;
+  width: 300px;
+  max-width: 45%;
+}

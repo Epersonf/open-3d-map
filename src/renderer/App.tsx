@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import Toolbar from './presentation/components/toolbar/Toolbar'
+import { Inspector } from './presentation/components/inspector'
 import StoresProvider, { useStores } from './stores'
 import CreateProjectDialog from './presentation/components/dialogs/create-project-dialog/CreateProjectDialog'
+import './app-layout.css'
 
 function AppContent() {
   const { projectStore } = useStores()
@@ -21,10 +23,15 @@ function AppContent() {
         onCancel={() => setShowCreateDialog(false)}
         isLoading={projectStore.loading}
       />
-      <main className="app">
-        <h1>Electron + React + TypeScript</h1>
-        <p>Aplicação básica com todos os sources em SRC usando TypeScript.</p>
-      </main>
+      <div className="app-container">
+        <main className="app">
+          <h1>Electron + React + TypeScript</h1>
+          <p>Aplicação básica com todos os sources em SRC usando TypeScript.</p>
+        </main>
+        <aside className="app-inspector">
+          <Inspector />
+        </aside>
+      </div>
     </>
   )
 }
@@ -38,4 +45,5 @@ export default function App(): JSX.Element {
     </StoresProvider>
   )
 }
+
 
