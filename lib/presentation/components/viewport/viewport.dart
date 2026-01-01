@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gl/flutter_gl.dart';
 import 'package:three_dart/three_dart.dart' as THREE;
+import 'package:three_dart_jsm/three_dart_jsm.dart' as THREE_JSM;
+import 'package:path/path.dart' as p;
 import '../../../stores/project_store.dart';
 
 /// Viewport using three_dart + flutter_gl.
@@ -22,6 +24,9 @@ class _Viewport3DState extends State<Viewport3D> {
   THREE.Scene? scene;
   THREE.Camera? camera;
   THREE.Mesh? cube;
+  final Map<String, THREE.Object3D> _gameObjectNodes = {};
+  final Map<String, THREE.Object3D> _loadedAssetScenes = {};
+  final Set<String> _loadingAssets = {};
 
   Size? screenSize;
   double width = 300;
@@ -118,6 +123,9 @@ class _Viewport3DState extends State<Viewport3D> {
     cube = THREE.Mesh(geometry, material);
     scene!.add(cube as THREE.Object3D);
 
+    // initial sync with project store (placeholders)
+    _syncSceneWithProject();
+
     loaded = true;
     setState(() {
       initialized = true;
@@ -137,6 +145,123 @@ class _Viewport3DState extends State<Viewport3D> {
         three3dRender.updateTexture(sourceTexture);
       } catch (_) {}
     }
+  }
+
+  /// Reconcile scene objects with ProjectStore's GameObjects.
+  void _syncSceneWithProject() {
+    final proj = ProjectStore.instance.project;
+    if (proj == null) return;
+    if (proj.scenes.isEmpty) return;
+
+    final roots = proj.scenes.first.rootObjects;
+
+    // mark existing ids
+    final existingIds = _gameObjectNodes.keys.toSet();
+
+    for (var i = 0; i < roots.length; i++) {
+      final go = roots[i];
+      if (_gameObjectNodes.containsKey(go.id)) {
+        existingIds.remove(go.id);
+        // update transform if needed (not implemented fully)
+        continue;
+      }
+      // If GameObject references an asset, try to load the model
+      final asset = ProjectStore.instance.project!.assets.firstWhere(
+        (a) => a.id == go.assetId,
+        orElse: () => null as dynamic,
+      );
+
+      final abs = p.join(ProjectStore.instance.projectPath!, asset.path);
+      final ext = p.extension(abs).toLowerCase();
+      if ((ext == '.glb' || ext == '.gltf')) {
+        // if asset scene already loaded, instantiate a clone for this GO
+        if (_loadedAssetScenes.containsKey(asset.id)) {
+          final template = _loadedAssetScenes[asset.id]!;
+          final inst = THREE_JSM.SkeletonUtils.clone(template);
+          inst.name = go.name;
+          inst.position.set((i - roots.length / 2) * 2.5, 0, 0);
+          scene!.add(inst);
+          _gameObjectNodes[go.id] = inst;
+        } else {
+          // not loaded yet: create a small placeholder and trigger load
+          final geom = THREE.BoxGeometry(0.6, 0.6, 0.6);
+          final color = _colorFromString(go.id);
+          final mat = THREE.MeshPhongMaterial({"color": color});
+          final mesh = THREE.Mesh(geom, mat);
+          mesh.name = go.name;
+          mesh.position.set((i - roots.length / 2) * 2.5, 0, 0);
+          scene!.add(mesh);
+          _gameObjectNodes[go.id] = mesh;
+
+          if (!_loadingAssets.contains(asset.id)) {
+            _loadingAssets.add(asset.id);
+            _loadAssetScene(asset.id, abs).then((_) {
+              _loadingAssets.remove(asset.id);
+              // after load, sync again to replace placeholders
+              try {
+                _syncSceneWithProject();
+              } catch (_) {}
+            });
+          }
+        }
+        existingIds.remove(go.id);
+        continue;
+      }
+    
+      // create a placeholder mesh for this GameObject so it appears in the viewport
+      final geom = THREE.BoxGeometry(1.0, 1.0, 1.0);
+      // color derived from hash of id to vary appearance
+      final color = _colorFromString(go.id);
+      final mat = THREE.MeshPhongMaterial({"color": color});
+      final mesh = THREE.Mesh(geom, mat);
+      mesh.name = go.name;
+
+      // position objects in a row to avoid overlap
+      mesh.position.set((i - roots.length / 2) * 2.5, 0, 0);
+
+      scene!.add(mesh);
+      _gameObjectNodes[go.id] = mesh;
+    }
+
+    // remove nodes that are no longer present
+    for (final id in existingIds) {
+      final node = _gameObjectNodes[id];
+      if (node != null) {
+        try {
+          scene!.remove(node);
+        } catch (_) {}
+      }
+      _gameObjectNodes.remove(id);
+    }
+  }
+
+  /// Load the GLTF/GLB asset and store the scene template in `_loadedAssetScenes`.
+  Future<void> _loadAssetScene(String assetId, String absolutePath) async {
+    if (absolutePath.isEmpty) return;
+
+    try {
+      final loader = THREE_JSM.GLTFLoader(null);
+      final uri = Uri.file(absolutePath).toString();
+      final result = await loader.loadAsync(uri);
+      if (result != null && result["scene"] != null) {
+        // store the loaded scene as template
+        final loadedScene = result["scene"] as THREE.Object3D;
+        _loadedAssetScenes[assetId] = loadedScene;
+      }
+    } catch (e) {
+      // loading failed; keep placeholder and log
+      debugPrint('Failed to load asset $absolutePath : $e');
+    }
+  }
+
+  int _colorFromString(String s) {
+    // simple hash to color
+    var h = 0;
+    for (var i = 0; i < s.length; i++) {
+      h = (h * 31 + s.codeUnitAt(i)) & 0xFFFFFF;
+    }
+    // blend with base
+    return (0x336600 | (h & 0x00FFFF));
   }
 
   void animate() {
@@ -180,6 +305,11 @@ class _Viewport3DState extends State<Viewport3D> {
                 child: Text('No project opened',
                     style: TextStyle(color: Colors.white54)));
           }
+
+          // keep scene in sync with project store (add/remove placeholders)
+          try {
+            _syncSceneWithProject();
+          } catch (_) {}
 
           return Row(
             children: [

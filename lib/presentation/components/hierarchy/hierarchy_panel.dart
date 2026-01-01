@@ -27,20 +27,23 @@ class HierarchyPanel extends StatelessWidget {
           if (project == null) return const SizedBox.shrink();
           final roots = _getRootObjects();
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: 300, maxWidth: MediaQuery.of(context).size.width),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Hierarchy', style: TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 8),
-                      for (final root in roots) HierarchyItem(node: root, depth: 0),
-                    ],
+          return Container(
+            height: double.infinity,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: 300, maxWidth: MediaQuery.of(context).size.width),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Hierarchy', style: TextStyle(color: Colors.white70)),
+                        const SizedBox(height: 8),
+                        for (final root in roots) HierarchyItem(node: root, depth: 0),
+                      ],
+                    ),
                   ),
                 ),
               ),
