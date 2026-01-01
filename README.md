@@ -1,45 +1,38 @@
-# Electron + React (básico)
+Flutter Desktop App (Windows .exe)
 
-Todos os sources estão na pasta `src`.
+Visão geral
+- Projeto Flutter mínimo focado em gerar um executável Windows (.exe).
 
 Pré-requisitos
+- Flutter SDK instalado (Windows).
+- Habilitar suporte a desktop: `flutter config --enable-windows-desktop`.
+- Verifique com `flutter doctor -v` que o suporte a Windows está OK.
 
-- Node.js (>=18 recomendado)
+Como usar
+1. Abra um terminal na pasta do projeto (`flutter_desktop_app`).
+2. Caso ainda não tenha os arquivos de plataforma, rode:
 
-Instalação
-
-```bash
-npm install
+```
+flutter create .
 ```
 
-Modo desenvolvimento (abre webpack-dev-server + Electron):
+3. Para executar no desktop durante desenvolvimento:
 
-```bash
-npm run dev
+```
+flutter run -d windows
 ```
 
-- Esse script usa `concurrently` e `wait-on` para iniciar o dev server do webpack e, em seguida, o Electron.
+4. Para gerar o executável final (.exe) em Release:
 
-Build (renderer com webpack):
-
-```bash
-npm run build
+```
+flutter build windows --release
 ```
 
-Iniciar (após build):
+Local do executável gerado
+- O `.exe` ficará em: `build/windows/runner/Release/` (nome do executável conforme o `name` no `pubspec.yaml`).
 
-```bash
-npm start
-```
+Notas
+- A pasta `windows/` é gerada pelo `flutter create` e contém os artefatos do runner (Visual Studio project files). 
+- Para distribuir um .exe, você pode empacotar os arquivos gerados em `build/windows/runner/Release/`.
 
-Estrutura importante
-
-- `src/main.js` — processo principal do Electron
-- `src/preload.js` — preload script (contextBridge)
-- `src/renderer` — app React (tudo dentro de `SRC`)
-- `vite.config.cjs` — configuração do Vite apontando para `src/renderer`
-
-Observações
-
-- Para empacotar a aplicação (installer), recomendo adicionar e configurar `electron-builder` ou `electron-forge` conforme sua necessidade.
-- Se preferir, posso ajustar para TypeScript ou adicionar empacotamento automático.
+Quer que eu rode `flutter create` ou adicione arquivos de runner do Windows aqui? Se sim, preciso que você execute os comandos localmente (tenha o Flutter e Visual Studio instalados).

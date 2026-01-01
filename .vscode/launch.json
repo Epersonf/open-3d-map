@@ -2,29 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "pwa-node",
+      "name": "Flutter: Run (Windows)",
       "request": "launch",
-      "name": "Run: npm run dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 9229,
-      "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}"
+      "type": "dart",
+      "flutterMode": "debug",
+      "deviceId": "windows"
     },
     {
-      "type": "pwa-node",
-      "request": "launch",
-      "name": "Run: npm start (production)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "start"],
-      "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}"
-    }
-  ],
-  "compounds": [
+      "name": "Flutter: Attach (Windows)",
+      "request": "attach",
+      "type": "dart",
+      "deviceId": "windows"
+    },
     {
-      "name": "Dev (start renderer + electron)",
-      "configurations": ["Run: npm run dev"]
+      "name": "Flutter: Build Windows (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "deviceId": "windows"
     }
   ]
 }

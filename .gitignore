@@ -1,4 +1,34 @@
-node_modules/
-dist/
-.env
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+
+# IntelliJ / VS Code
+.idea/
+.vscode/
+*.iml
+
+# macOS
 .DS_Store
+
+# Windows build outputs and binaries
+windows/runner/Debug/
+windows/runner/Release/
+windows/runner/*.pdb
+*.exe
+*.dll
+*.lib
+
+# Visual Studio
+.vs/
+*.vcxproj*
+*.suo
+*.user
+*.opensdf
+*.sdf
+
+# Generated files
+.flutter-plugins
+.flutter-plugins-dependencies
