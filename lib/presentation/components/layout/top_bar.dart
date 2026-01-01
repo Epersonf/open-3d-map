@@ -1,23 +1,104 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
 
 class TopBar extends StatelessWidget {
   const TopBar({super.key});
 
-  void _onSelected(BuildContext context, String value) {
+  Future<void> _onSelected(BuildContext context, String value) async {
     final messenger = ScaffoldMessenger.of(context);
-    switch (value) {
-      case 'new':
-        messenger.showSnackBar(const SnackBar(content: Text('New project (stub)')));
-        break;
-      case 'open':
-        messenger.showSnackBar(const SnackBar(content: Text('Open project (stub)')));
-        break;
-      case 'export':
+    try {
+      if (value == 'open') {
+        final selected = await FilePicker.platform.getDirectoryPath();
+        if (selected == null) {
+          messenger.showSnackBar(const SnackBar(content: Text('Open cancelled')));
+          return;
+        }
+
+        final indexFile = File(p.join(selected, 'index.json'));
+        if (!await indexFile.exists()) {
+          messenger.showSnackBar(SnackBar(content: Text('index.json not found in: $selected')));
+          return;
+        }
+
+        final content = await indexFile.readAsString();
+        messenger.showSnackBar(const SnackBar(content: Text('Project opened (stub)')));
+        // For now just log content to console
+        // ignore: avoid_print
+        print('Opened project at $selected:\n$content');
+        return;
+      }
+
+      if (value == 'new') {
+        final name = await _askForProjectName(context);
+        if (name == null || name.trim().isEmpty) {
+          messenger.showSnackBar(const SnackBar(content: Text('Project creation cancelled')));
+          return;
+        }
+
+        final parent = await FilePicker.platform.getDirectoryPath();
+        if (parent == null) {
+          messenger.showSnackBar(const SnackBar(content: Text('No folder selected')));
+          return;
+        }
+
+        final projectDir = Directory(p.join(parent, name));
+        if (!await projectDir.exists()) {
+          await projectDir.create(recursive: true);
+        }
+
+        final assetsDir = Directory(p.join(projectDir.path, 'assets'));
+        if (!await assetsDir.exists()) await assetsDir.create(recursive: true);
+
+        final index = {
+          'version': 1,
+          'name': name,
+          'assetsFolder': 'assets',
+          'assets': [],
+          'scenes': []
+        };
+
+        final indexFile = File(p.join(projectDir.path, 'index.json'));
+        await indexFile.writeAsString(const JsonEncoder.withIndent('  ').convert(index));
+
+        messenger.showSnackBar(SnackBar(content: Text('Project created at ${projectDir.path}')));
+        // ignore: avoid_print
+        print('Created project at ${projectDir.path}');
+        return;
+      }
+
+      if (value == 'export') {
         messenger.showSnackBar(const SnackBar(content: Text('Export project (stub)')));
-        break;
-      default:
-        break;
+        return;
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  }
+
+  Future<String?> _askForProjectName(BuildContext context) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('New Project'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Project name'),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(controller.text.trim()), child: const Text('Create')),
+          ],
+        );
+      },
+    );
+    return result;
   }
 
   @override
