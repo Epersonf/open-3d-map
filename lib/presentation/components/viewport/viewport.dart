@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
+import 'package:open_3d_mapper/presentation/components/viewport/fly_camera_controller.dart';
 import 'package:vector_math/vector_math.dart';
 import 'package:flutter_scene/scene.dart';
 
@@ -9,9 +12,12 @@ class Viewport3D extends StatefulWidget {
   State<Viewport3D> createState() => _Viewport3DState();
 }
 
-class _Viewport3DState extends State<Viewport3D> {
+class _Viewport3DState extends State<Viewport3D>
+    with SingleTickerProviderStateMixin {
+  late PerspectiveCamera camera;
+  late FlyCameraController controller;
+  late final Ticker _ticker;
   final Scene scene = Scene();
-  late Camera camera;
 
   @override
   void initState() {
@@ -22,34 +28,54 @@ class _Viewport3DState extends State<Viewport3D> {
       target: Vector3.zero(),
     );
 
-    final child = makeCube(scene.environment);
+    controller = FlyCameraController(camera);
 
-    final node = Node(name: 'cube', mesh: child);
-    scene.add(node);
+    final cube = Mesh(
+      CuboidGeometry(Vector3(1, 1, 1)),
+      PhysicallyBasedMaterial(environment: scene.environment)
+        ..baseColorFactor = Vector4(0.2, 0.7, 1, 1),
+    );
 
-    // Garante que os recursos carregaram
+    scene.add(Node(name: 'cube', mesh: cube));
+
     Scene.initializeStaticResources().then((_) {
-      setState(() {});
+      if (mounted) setState(() {});
     });
+
+    _ticker = createTicker((_) {
+      controller.update();
+      setState(() {});
+    })
+      ..start();
   }
 
-  Mesh makeCube(Environment env) {
-    final geometry = CuboidGeometry(Vector3(1, 1, 1));
-
-    final material = PhysicallyBasedMaterial(environment: env)
-      ..baseColorFactor = Vector4(0.2, 0.7, 1.0, 1.0) // cor do cubo
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 0.5
-      ..vertexColorWeight = 1.0; // usa as cores de vértice também, se tiver
-
-    return Mesh(geometry, material);
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _ScenePainter(scene, camera),
-      size: Size.infinite,
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          controller.onKeyDown(event.logicalKey);
+        } else if (event is KeyUpEvent) {
+          controller.onKeyUp(event.logicalKey);
+        }
+        return KeyEventResult.handled;
+      },
+      child: Listener(
+        onPointerDown: (e) => controller.onPointerDown(e.buttons),
+        onPointerUp: (e) => controller.onPointerUp(e.buttons),
+        child: SizedBox.expand(
+          child: CustomPaint(
+            painter: _ScenePainter(scene, camera),
+          ),
+        ),
+      ),
     );
   }
 }
