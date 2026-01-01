@@ -8,9 +8,6 @@ import 'package:three_dart_jsm/three_dart_jsm.dart' as THREE_JSM;
 import 'package:path/path.dart' as p;
 import '../../../stores/project_store.dart';
 
-/// Viewport using three_dart + flutter_gl.
-/// Renders a simple rotating cube as a starting point. The asset side-list
-/// remains: double-clicking a .glb still calls `ProjectStore.addAssetAsGameObject`.
 class Viewport3D extends StatefulWidget {
   const Viewport3D({super.key});
 
@@ -27,6 +24,7 @@ class _Viewport3DState extends State<Viewport3D> {
   final Map<String, THREE.Object3D> _gameObjectNodes = {};
   final Map<String, THREE.Object3D> _loadedAssetScenes = {};
   final Set<String> _loadingAssets = {};
+  final Map<String, bool> _nodeIsAssetInstance = {};
 
   Size? screenSize;
   double width = 300;
@@ -161,53 +159,79 @@ class _Viewport3DState extends State<Viewport3D> {
     for (var i = 0; i < roots.length; i++) {
       final go = roots[i];
       if (_gameObjectNodes.containsKey(go.id)) {
+        // If the GO already has a node, but now the referenced asset is loaded
+        // and the current node is only a placeholder, replace it with an instance.
+        final existingNode = _gameObjectNodes[go.id]!;
+        final asset = ProjectStore.instance.project!.assets.where((a) => a.id == go.assetId).toList();
+        if (asset.isNotEmpty) {
+          final as = asset.first;
+          if (_loadedAssetScenes.containsKey(as.id) && (_nodeIsAssetInstance[go.id] != true)) {
+            // remove placeholder
+            try {
+              scene!.remove(existingNode);
+            } catch (_) {}
+            // add clone
+            final template = _loadedAssetScenes[as.id]!;
+            final inst = THREE_JSM.SkeletonUtils.clone(template);
+            inst.name = go.name;
+            inst.position.set(existingNode.position.x, existingNode.position.y, existingNode.position.z);
+            scene!.add(inst);
+            _gameObjectNodes[go.id] = inst;
+            _nodeIsAssetInstance[go.id] = true;
+            existingIds.remove(go.id);
+            continue;
+          }
+        }
+
         existingIds.remove(go.id);
         // update transform if needed (not implemented fully)
         continue;
       }
       // If GameObject references an asset, try to load the model
-      final asset = ProjectStore.instance.project!.assets.firstWhere(
-        (a) => a.id == go.assetId,
-        orElse: () => null as dynamic,
-      );
+      // find asset referenced by this GameObject (if any)
+      final assets = ProjectStore.instance.project!.assets.where((a) => a.id == go.assetId).toList();
+      final asset = assets.isNotEmpty ? assets.first : null;
+      if (asset != null) {
+        final abs = p.join(ProjectStore.instance.projectPath!, asset.path);
+        final ext = p.extension(abs).toLowerCase();
+        if ((ext == '.glb' || ext == '.gltf')) {
+          // if asset scene already loaded, instantiate a clone for this GO
+          if (_loadedAssetScenes.containsKey(asset.id)) {
+            final template = _loadedAssetScenes[asset.id]!;
+            final inst = THREE_JSM.SkeletonUtils.clone(template);
+            inst.name = go.name;
+            inst.position.set((i - roots.length / 2) * 2.5, 0, 0);
+            scene!.add(inst);
+            _gameObjectNodes[go.id] = inst;
+          } else {
+            // not loaded yet: create a small placeholder and trigger load
+            final geom = THREE.BoxGeometry(0.6, 0.6, 0.6);
+            final color = _colorFromString(go.id);
+            final mat = THREE.MeshPhongMaterial({"color": color});
+            final mesh = THREE.Mesh(geom, mat);
+            mesh.name = go.name;
+            mesh.position.set((i - roots.length / 2) * 2.5, 0, 0);
+            scene!.add(mesh);
+            _gameObjectNodes[go.id] = mesh;
+            _nodeIsAssetInstance[go.id] = false;
 
-      final abs = p.join(ProjectStore.instance.projectPath!, asset.path);
-      final ext = p.extension(abs).toLowerCase();
-      if ((ext == '.glb' || ext == '.gltf')) {
-        // if asset scene already loaded, instantiate a clone for this GO
-        if (_loadedAssetScenes.containsKey(asset.id)) {
-          final template = _loadedAssetScenes[asset.id]!;
-          final inst = THREE_JSM.SkeletonUtils.clone(template);
-          inst.name = go.name;
-          inst.position.set((i - roots.length / 2) * 2.5, 0, 0);
-          scene!.add(inst);
-          _gameObjectNodes[go.id] = inst;
-        } else {
-          // not loaded yet: create a small placeholder and trigger load
-          final geom = THREE.BoxGeometry(0.6, 0.6, 0.6);
-          final color = _colorFromString(go.id);
-          final mat = THREE.MeshPhongMaterial({"color": color});
-          final mesh = THREE.Mesh(geom, mat);
-          mesh.name = go.name;
-          mesh.position.set((i - roots.length / 2) * 2.5, 0, 0);
-          scene!.add(mesh);
-          _gameObjectNodes[go.id] = mesh;
-
-          if (!_loadingAssets.contains(asset.id)) {
-            _loadingAssets.add(asset.id);
-            _loadAssetScene(asset.id, abs).then((_) {
-              _loadingAssets.remove(asset.id);
-              // after load, sync again to replace placeholders
-              try {
-                _syncSceneWithProject();
-              } catch (_) {}
-            });
+            if (!_loadingAssets.contains(asset.id)) {
+              _loadingAssets.add(asset.id);
+              _loadAssetScene(asset.id, abs).then((_) {
+                _loadingAssets.remove(asset.id);
+                // after load, sync again to replace placeholders
+                try {
+                  _syncSceneWithProject();
+                } catch (_) {}
+              });
+            }
           }
+          existingIds.remove(go.id);
+          continue;
         }
-        existingIds.remove(go.id);
-        continue;
+        // if asset exists but isn't a GLTF/GLB, fall through to create a generic placeholder
       }
-    
+
       // create a placeholder mesh for this GameObject so it appears in the viewport
       final geom = THREE.BoxGeometry(1.0, 1.0, 1.0);
       // color derived from hash of id to vary appearance
@@ -221,6 +245,7 @@ class _Viewport3DState extends State<Viewport3D> {
 
       scene!.add(mesh);
       _gameObjectNodes[go.id] = mesh;
+      _nodeIsAssetInstance[go.id] = false;
     }
 
     // remove nodes that are no longer present
