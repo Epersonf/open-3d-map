@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
+import '../../../domain/project/project.dart';
 
 class TopBar extends StatelessWidget {
   const TopBar({super.key});
@@ -25,10 +26,11 @@ class TopBar extends StatelessWidget {
         }
 
         final content = await indexFile.readAsString();
-        messenger.showSnackBar(const SnackBar(content: Text('Project opened (stub)')));
-        // For now just log content to console
+        final json = jsonDecode(content) as Map<String, dynamic>;
+        final project = Project.fromJson(json);
+        messenger.showSnackBar(SnackBar(content: Text('Project opened: ${project.name}')));
         // ignore: avoid_print
-        print('Opened project at $selected:\n$content');
+        print('Opened project at $selected:\n${project.toJson()}');
         return;
       }
 
@@ -53,16 +55,9 @@ class TopBar extends StatelessWidget {
         final assetsDir = Directory(p.join(projectDir.path, 'assets'));
         if (!await assetsDir.exists()) await assetsDir.create(recursive: true);
 
-        final index = {
-          'version': 1,
-          'name': name,
-          'assetsFolder': 'assets',
-          'assets': [],
-          'scenes': []
-        };
-
+        final project = Project.createNew(name);
         final indexFile = File(p.join(projectDir.path, 'index.json'));
-        await indexFile.writeAsString(const JsonEncoder.withIndent('  ').convert(index));
+        await indexFile.writeAsString(const JsonEncoder.withIndent('  ').convert(project.toJson()));
 
         messenger.showSnackBar(SnackBar(content: Text('Project created at ${projectDir.path}')));
         // ignore: avoid_print
@@ -125,7 +120,7 @@ class TopBar extends StatelessWidget {
             itemBuilder: (ctx) => const [
               PopupMenuItem(value: 'new', child: Text('New')),
               PopupMenuItem(value: 'open', child: Text('Open')),
-              PopupMenuItem(value: 'export', child: Text('Export')),
+              // PopupMenuItem(value: 'export', child: Text('Export')),
             ],
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

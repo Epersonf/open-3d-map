@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'presentation/components/layout/top_bar.dart';
+import 'presentation/components/inspector/inspector_panel.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,24 +33,31 @@ class HomePage extends StatelessWidget {
         children: [
           const TopBar(),
           Expanded(
-            child: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      content: const Text('Funcionando no desktop!'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Fechar'),
-                        ),
-                      ],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            content: const Text('Funcionando no desktop!'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Fechar'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: const Text('Mostrar diálogo'),
                     ),
-                  );
-                },
-                child: const Text('Mostrar diálogo'),
-              ),
+                  ),
+                ),
+                const InspectorPanel(),
+              ],
             ),
           ),
         ],
