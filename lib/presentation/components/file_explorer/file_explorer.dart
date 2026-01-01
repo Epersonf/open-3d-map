@@ -10,7 +10,7 @@ class FileExplorer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 200,
+      height: 240,
       decoration: const BoxDecoration(
         color: Color(0xFF0B0B0B),
         border: Border(top: BorderSide(color: Color(0xFF222222))),
@@ -19,38 +19,116 @@ class FileExplorer extends StatelessWidget {
         animation: ProjectStore.instance,
         builder: (context, _) {
           final store = ProjectStore.instance;
-          if (store.projectPath == null) {
+          if (store.projectPath == null || store.assetsRoot == null) {
             return const Center(child: Text('No project opened', style: TextStyle(color: Colors.white70)));
           }
-          final assets = store.assets;
-          if (assets.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text('No assets found in assets/ folder', style: TextStyle(color: Colors.white70)),
-            );
-          }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(8),
-            itemCount: assets.length,
-            itemBuilder: (ctx, i) {
-              final f = assets[i];
-              final relative = p.relative(f.path, from: store.projectPath!);
-              final isDir = FileSystemEntity.isDirectorySync(f.path);
-              return ListTile(
-                dense: true,
-                leading: Icon(isDir ? Icons.folder : Icons.insert_drive_file, color: Colors.white70),
-                title: Text(relative, style: const TextStyle(color: Colors.white)),
-                subtitle: isDir ? const Text('Folder', style: TextStyle(color: Colors.white54)) : null,
-                onTap: () {
-                  if (!isDir) {
-                    // for now, open with default app
-                    // ignore: avoid_slow_async_io
-                    Process.run('explorer', [f.path]);
-                  }
-                },
-              );
-            },
+          final current = store.currentPath ?? store.assetsRoot!;
+
+          final entries = store.entries;
+          final folders = entries.where((e) => FileSystemEntity.isDirectorySync(e.path)).toList();
+          final files = entries.where((e) => !FileSystemEntity.isDirectorySync(e.path)).toList();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // top bar with path and controls
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                color: const Color(0xFF141414),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(current, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    ),
+                    IconButton(
+                      tooltip: 'Up',
+                      onPressed: () async {
+                        // disable if at assets root
+                        if (p.normalize(current) == p.normalize(store.assetsRoot!)) return;
+                        await store.cdUp();
+                      },
+                      icon: Icon(Icons.arrow_upward, color: p.normalize(current) == p.normalize(store.assetsRoot!) ? Colors.white24 : Colors.white70),
+                    ),
+                    IconButton(
+                      tooltip: 'Reload',
+                      onPressed: () async => await store.reload(),
+                      icon: const Icon(Icons.refresh, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      // folders list
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Folders', style: TextStyle(color: Colors.white70)),
+                            const SizedBox(height: 6),
+                            Expanded(
+                              child: folders.isEmpty
+                                  ? const Text('No folders', style: TextStyle(color: Colors.white54))
+                                  : ListView.builder(
+                                      itemCount: folders.length,
+                                      itemBuilder: (ctx, i) {
+                                        final f = folders[i];
+                                        final name = p.basename(f.path);
+                                        return ListTile(
+                                          dense: true,
+                                          leading: const Icon(Icons.folder, color: Colors.white70),
+                                          title: Text(name, style: const TextStyle(color: Colors.white)),
+                                          onTap: () async {
+                                            await store.cdInto(f.path);
+                                          },
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const VerticalDivider(color: Color(0xFF222222)),
+                      // files list
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Files', style: TextStyle(color: Colors.white70)),
+                            const SizedBox(height: 6),
+                            Expanded(
+                              child: files.isEmpty
+                                  ? const Text('No files', style: TextStyle(color: Colors.white54))
+                                  : ListView.builder(
+                                      itemCount: files.length,
+                                      itemBuilder: (ctx, i) {
+                                        final f = files[i];
+                                        final name = p.basename(f.path);
+                                        return ListTile(
+                                          dense: true,
+                                          leading: const Icon(Icons.insert_drive_file, color: Colors.white70),
+                                          title: Text(name, style: const TextStyle(color: Colors.white)),
+                                          onTap: () {
+                                            // open containing folder in explorer and select file
+                                            // ignore: avoid_slow_async_io
+                                            Process.run('explorer', [f.path]);
+                                          },
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
