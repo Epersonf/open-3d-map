@@ -180,4 +180,36 @@ class ProjectStore extends ChangeNotifier {
     if (replaced) notifyListeners();
     return replaced;
   }
+
+  /// Delete a GameObject (by id) from all scenes. Returns true if deleted.
+  bool deleteGameObject(String id) {
+    if (_project == null) return false;
+    bool deleted = false;
+
+    bool _removeInList(List<GameObject> list) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id == id) {
+          list.removeAt(i);
+          return true;
+        }
+        if (list[i].children.isNotEmpty) {
+          final did = _removeInList(list[i].children);
+          if (did) return true;
+        }
+      }
+      return false;
+    }
+
+    for (final scene in _project!.scenes) {
+      if (_removeInList(scene.rootObjects)) {
+        deleted = true;
+        break;
+      }
+    }
+
+    if (deleted) {
+      notifyListeners();
+    }
+    return deleted;
+  }
 }

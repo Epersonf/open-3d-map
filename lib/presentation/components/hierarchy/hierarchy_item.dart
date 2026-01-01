@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../domain/scene/game_object.dart';
 import '../../../stores/selection_store.dart';
+import 'hierarchy_context_menu.dart';
 
 class HierarchyItem extends StatelessWidget {
   final GameObject node;
@@ -17,13 +18,19 @@ class HierarchyItem extends StatelessWidget {
       return Observer(builder: (_) {
         final selected = SelectionStore.instance.selected;
         final isSelected = selected != null && selected.id == node.id;
-        return ListTile(
-          title: Text(name, style: TextStyle(color: isSelected ? Colors.blue[200] : Colors.white)),
-          dense: true,
-          selected: isSelected,
-          tileColor: isSelected ? Colors.blue.withOpacity(0.12) : Colors.transparent,
-          contentPadding: EdgeInsets.only(left: 12.0 + depth * 12.0, right: 12),
-          onTap: () => SelectionStore.instance.select(node),
+        return GestureDetector(
+          onSecondaryTapDown: (details) async {
+            // show context menu at pointer
+            await showHierarchyContextMenu(context, details.globalPosition, node);
+          },
+          child: ListTile(
+            title: Text(name, style: TextStyle(color: isSelected ? Colors.blue[200] : Colors.white)),
+            dense: true,
+            selected: isSelected,
+            tileColor: isSelected ? Colors.blue.withOpacity(0.12) : Colors.transparent,
+            contentPadding: EdgeInsets.only(left: 12.0 + depth * 12.0, right: 12),
+            onTap: () => SelectionStore.instance.select(node),
+          ),
         );
       });
     }
@@ -31,21 +38,26 @@ class HierarchyItem extends StatelessWidget {
     return Observer(builder: (_) {
       final selected = SelectionStore.instance.selected;
       final isSelected = selected != null && selected.id == node.id;
-      return ExpansionTile(
-        title: Container(
-          color: isSelected ? Colors.blue.withOpacity(0.12) : Colors.transparent,
-          padding: EdgeInsets.only(left: 0),
-          child: Text(name, style: TextStyle(color: isSelected ? Colors.blue[200] : Colors.white)),
+      return GestureDetector(
+        onSecondaryTapDown: (details) async {
+          await showHierarchyContextMenu(context, details.globalPosition, node);
+        },
+        child: ExpansionTile(
+          title: Container(
+            color: isSelected ? Colors.blue.withOpacity(0.12) : Colors.transparent,
+            padding: EdgeInsets.only(left: 0),
+            child: Text(name, style: TextStyle(color: isSelected ? Colors.blue[200] : Colors.white)),
+          ),
+          tilePadding: EdgeInsets.only(left: 8.0 + depth * 12.0, right: 8),
+          children: children.map((c) => HierarchyItem(node: c, depth: depth + 1)).toList(),
+          backgroundColor: Colors.transparent,
+          collapsedIconColor: Colors.white70,
+          iconColor: Colors.white70,
+          onExpansionChanged: (_) {},
+          key: Key(node.id),
+          // tap to select this node
+          childrenPadding: EdgeInsets.zero,
         ),
-        tilePadding: EdgeInsets.only(left: 8.0 + depth * 12.0, right: 8),
-        children: children.map((c) => HierarchyItem(node: c, depth: depth + 1)).toList(),
-        backgroundColor: Colors.transparent,
-        collapsedIconColor: Colors.white70,
-        iconColor: Colors.white70,
-        onExpansionChanged: (_) {},
-        key: Key(node.id),
-        // tap to select this node
-        childrenPadding: EdgeInsets.zero,
       );
     });
   }
