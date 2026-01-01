@@ -17,10 +17,13 @@ class _Viewport3DState extends State<Viewport3D> {
   void initState() {
     super.initState();
 
-    camera = PerspectiveCamera();
+    camera = PerspectiveCamera(
+      position: Vector3(0, 0, 5),
+      target: Vector3.zero(),
+    );
 
     final child = makeCube(scene.environment);
-    
+
     final node = Node(name: 'cube', mesh: child);
     scene.add(node);
 
@@ -62,6 +65,7 @@ class _ScenePainter extends CustomPainter {
     scene.render(
       camera,
       canvas,
+      viewport: Offset.zero & size,
     );
   }
 
