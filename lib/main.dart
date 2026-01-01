@@ -6,6 +6,7 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'stores/selection_store.dart';
 import 'presentation/components/hierarchy/hierarchy_panel.dart';
 import 'stores/project_store.dart';
+import 'presentation/components/viewport/viewport.dart';
 
 void main() {
   runApp(const MyApp());
@@ -51,7 +52,7 @@ class HomePage extends StatelessWidget {
                                 animation: ProjectStore.instance,
                                 builder: (ctx, _) {
                                   if (ProjectStore.instance.projectPath != null) {
-                                    return const Center(child: Text('Viewport / Scene area', style: TextStyle(color: Colors.white70)));
+                                    return const Viewport3D();
                                   }
                                   return const Center(child: Text('No project opened', style: TextStyle(color: Colors.white54)));
                                 },

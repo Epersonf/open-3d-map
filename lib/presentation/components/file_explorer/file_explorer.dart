@@ -112,9 +112,10 @@ class FileExplorer extends StatelessWidget {
                                         final f = files[i];
                                         final name = p.basename(f.path);
                                         return GestureDetector(
-                                          onDoubleTap: () async {
+                                            onDoubleTap: () async {
                                             final ext = p.extension(f.path).toLowerCase().replaceFirst('.', '');
-                                            const supported = ['fbx', 'obj', 'gltf', 'glb'];
+                                            // Only GLB is supported for import into the scene
+                                            const supported = ['glb'];
                                             if (supported.contains(ext)) {
                                               await ProjectStore.instance.addAssetAsGameObject(f.path);
                                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added $name to scene')));
