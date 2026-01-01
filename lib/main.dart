@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_3d_mapper/presentation/components/file_explorer/file_explorer.dart';
 import 'presentation/components/layout/top_bar.dart';
 import 'presentation/components/inspector/inspector_panel.dart';
+import 'stores/project_store.dart';
 
 void main() {
   runApp(const MyApp());
@@ -60,7 +61,15 @@ class HomePage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const InspectorPanel(),
+                      AnimatedBuilder(
+                        animation: ProjectStore.instance,
+                        builder: (ctx, _) {
+                          if (ProjectStore.instance.projectPath != null) {
+                            return const InspectorPanel();
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
                     ],
                   ),
                 ),
