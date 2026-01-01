@@ -58,7 +58,6 @@ class _TransformInspectorState extends State<TransformInspector> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      color: const Color(0xFF121212),
       child: Column(
         children: [
           _tripleField('Position', px, py, pz),

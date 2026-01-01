@@ -47,7 +47,6 @@ class _TagsInspectorState extends State<TagsInspector> {
           const SizedBox(height: 8),
           for (var i = 0; i < _tags.length; i++)
             Card(
-              color: const Color(0xFF1B1B1B),
               child: ListTile(
                 title: Text(_tags[i].key, style: const TextStyle(color: Colors.white)),
                 subtitle: SelectableText(_tags[i].value, style: const TextStyle(color: Colors.white70)),
