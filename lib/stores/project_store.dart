@@ -1,8 +1,13 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:open_3d_mapper/domain/asset/asset.dart';
 import 'package:path/path.dart' as p;
 import '../domain/project/project.dart';
+import '../domain/scene/game_object.dart';
+import '../domain/scene/transform.dart';
+import '../domain/scene/scene.dart';
 
 class ProjectStore extends ChangeNotifier {
   ProjectStore._privateConstructor();
@@ -90,5 +95,47 @@ class ProjectStore extends ChangeNotifier {
 
   Future<void> reload() async {
     await refreshCurrent();
+  }
+
+  /// Add an asset file (absolute path) as a GameObject into the active scene
+  Future<void> addAssetAsGameObject(String absolutePath) async {
+    if (_project == null || _projectPath == null) return;
+
+    final rel = p.relative(absolutePath, from: _projectPath!);
+    final base = p.basenameWithoutExtension(absolutePath);
+    final id = 'go-${DateTime.now().millisecondsSinceEpoch}';
+    final assetId = rel; // using relative path as asset identifier for now
+
+    final go = GameObject(
+      id: id,
+      name: base,
+      parentId: null,
+      assetId: assetId,
+      transform: Transform(position: Vec3(x: 0, y: 0, z: 0), rotation: Vec3(x: 0, y: 0, z: 0), scale: Vec3(x: 1, y: 1, z: 1)),
+    );
+
+    // ensure project has at least one scene
+    if (_project!.scenes.isEmpty) {
+      final scene = Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [go]);
+      _project!.scenes.add(scene);
+    } else {
+      _project!.scenes.first.rootObjects.add(go);
+    }
+
+    // add asset entry if missing
+    final exists = _project!.assets.any((a) => a.path == rel);
+    if (!exists) {
+      final a = Asset(id: base, path: rel, type: p.extension(absolutePath).replaceFirst('.', ''));
+      _project!.assets.add(a);
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> saveProject() async {
+    if (_project == null || _projectPath == null) return;
+    final indexFile = File(p.join(_projectPath!, 'index.json'));
+    final encoded = const JsonEncoder.withIndent('  ').convert(_project!.toJson());
+    await indexFile.writeAsString(encoded);
   }
 }

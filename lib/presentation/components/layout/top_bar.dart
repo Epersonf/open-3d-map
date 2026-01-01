@@ -13,6 +13,15 @@ class TopBar extends StatelessWidget {
   Future<void> _onSelected(BuildContext context, String value) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
+      if (value == 'save') {
+        if (ProjectStore.instance.project == null) {
+          messenger.showSnackBar(const SnackBar(content: Text('No project to save')));
+          return;
+        }
+        await ProjectStore.instance.saveProject();
+        messenger.showSnackBar(const SnackBar(content: Text('Project saved')));
+        return;
+      }
       if (value == 'open') {
         final selected = await FilePicker.platform.getDirectoryPath();
         if (selected == null) {
@@ -122,6 +131,7 @@ class TopBar extends StatelessWidget {
             itemBuilder: (ctx) => const [
               PopupMenuItem(value: 'new', child: Text('New')),
               PopupMenuItem(value: 'open', child: Text('Open')),
+              PopupMenuItem(value: 'save', child: Text('Save')),
               // PopupMenuItem(value: 'export', child: Text('Export')),
             ],
             child: Padding(

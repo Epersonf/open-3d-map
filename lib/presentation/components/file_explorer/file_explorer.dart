@@ -78,13 +78,16 @@ class FileExplorer extends StatelessWidget {
                                       itemBuilder: (ctx, i) {
                                         final f = folders[i];
                                         final name = p.basename(f.path);
-                                        return ListTile(
-                                          dense: true,
-                                          leading: const Icon(Icons.folder, color: Colors.white70),
-                                          title: Text(name, style: const TextStyle(color: Colors.white)),
-                                          onTap: () async {
-                                            await store.cdInto(f.path);
-                                          },
+                                        return GestureDetector(
+                                          onDoubleTap: () async => await store.cdInto(f.path),
+                                          child: ListTile(
+                                            dense: true,
+                                            leading: const Icon(Icons.folder, color: Colors.white70),
+                                            title: Text(name, style: const TextStyle(color: Colors.white)),
+                                            onTap: () async {
+                                              await store.cdInto(f.path);
+                                            },
+                                          ),
                                         );
                                       },
                                     ),
@@ -108,15 +111,29 @@ class FileExplorer extends StatelessWidget {
                                       itemBuilder: (ctx, i) {
                                         final f = files[i];
                                         final name = p.basename(f.path);
-                                        return ListTile(
-                                          dense: true,
-                                          leading: const Icon(Icons.insert_drive_file, color: Colors.white70),
-                                          title: Text(name, style: const TextStyle(color: Colors.white)),
-                                          onTap: () {
-                                            // open containing folder in explorer and select file
-                                            // ignore: avoid_slow_async_io
-                                            Process.run('explorer', [f.path]);
+                                        return GestureDetector(
+                                          onDoubleTap: () async {
+                                            final ext = p.extension(f.path).toLowerCase().replaceFirst('.', '');
+                                            const supported = ['fbx', 'obj', 'gltf', 'glb'];
+                                            if (supported.contains(ext)) {
+                                              await ProjectStore.instance.addAssetAsGameObject(f.path);
+                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added $name to scene')));
+                                            } else {
+                                              // open default
+                                              // ignore: avoid_slow_async_io
+                                              Process.run('explorer', [f.path]);
+                                            }
                                           },
+                                          child: ListTile(
+                                            dense: true,
+                                            leading: const Icon(Icons.insert_drive_file, color: Colors.white70),
+                                            title: Text(name, style: const TextStyle(color: Colors.white)),
+                                            onTap: () {
+                                              // open containing folder in explorer and select file
+                                              // ignore: avoid_slow_async_io
+                                              Process.run('explorer', [f.path]);
+                                            },
+                                          ),
                                         );
                                       },
                                     ),
