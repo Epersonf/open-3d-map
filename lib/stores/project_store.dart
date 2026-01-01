@@ -149,4 +149,35 @@ class ProjectStore extends ChangeNotifier {
     final encoded = const JsonEncoder.withIndent('  ').convert(_project!.toJson());
     await indexFile.writeAsString(encoded);
   }
+
+  /// Replace an existing GameObject (by id) in all scenes/root objects.
+  /// Returns true if replaced.
+  bool updateGameObject(GameObject updated) {
+    if (_project == null) return false;
+    bool replaced = false;
+
+    bool _replaceInList(List<GameObject> list) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id == updated.id) {
+          list[i] = updated;
+          return true;
+        }
+        if (list[i].children.isNotEmpty) {
+          final did = _replaceInList(list[i].children);
+          if (did) return true;
+        }
+      }
+      return false;
+    }
+
+    for (final scene in _project!.scenes) {
+      if (_replaceInList(scene.rootObjects)) {
+        replaced = true;
+        break;
+      }
+    }
+
+    if (replaced) notifyListeners();
+    return replaced;
+  }
 }
