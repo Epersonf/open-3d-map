@@ -30,7 +30,7 @@ class TopBar extends StatelessWidget {
         final json = jsonDecode(content) as Map<String, dynamic>;
         final project = Project.fromJson(json);
         messenger.showSnackBar(SnackBar(content: Text('Project opened: ${project.name}')));
-        ProjectStore.instance.setProjectPath(selected);
+        ProjectStore.instance.setProject(project, selected);
         // ignore: avoid_print
         print('Opened project at $selected:\n${project.toJson()}');
         return;
@@ -60,7 +60,7 @@ class TopBar extends StatelessWidget {
         final project = Project.createNew(name);
         final indexFile = File(p.join(projectDir.path, 'index.json'));
         await indexFile.writeAsString(const JsonEncoder.withIndent('  ').convert(project.toJson()));
-        ProjectStore.instance.setProjectPath(projectDir.path);
+        ProjectStore.instance.setProject(project, projectDir.path);
         messenger.showSnackBar(SnackBar(content: Text('Project created at ${projectDir.path}')));
         // ignore: avoid_print
         print('Created project at ${projectDir.path}');

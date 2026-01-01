@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'game_object.dart';
 
 part 'scene.g.dart';
 
@@ -6,7 +7,7 @@ part 'scene.g.dart';
 class Scene {
   final String id;
   final String name;
-  final List<dynamic> rootObjects;
+  final List<GameObject> rootObjects;
 
   Scene({required this.id, required this.name, required this.rootObjects});
 

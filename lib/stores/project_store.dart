@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import '../domain/project/project.dart';
 
 class ProjectStore extends ChangeNotifier {
   ProjectStore._privateConstructor();
@@ -15,12 +16,29 @@ class ProjectStore extends ChangeNotifier {
   String? get assetsRoot => _assetsRoot;
   String? get currentPath => _currentPath;
   List<FileSystemEntity> get entries => List.unmodifiable(_entries);
+  Project? _project;
+  Project? get project => _project;
+
+  Map<String, dynamic>? get activeSceneMap {
+    if (_project == null) return null;
+    if (_project!.scenes.isEmpty) return null;
+    // scenes are json_serializable Scene instances; Scene.rootObjects may be dynamic
+    final first = _project!.scenes.first;
+    // try to convert to Map via toJson
+    return first.toJson();
+  }
 
   void setProjectPath(String path) {
     _projectPath = path;
     _assetsRoot = p.join(path, 'assets');
     _currentPath = _assetsRoot;
     refreshCurrent();
+    notifyListeners();
+  }
+
+  void setProject(Project project, String path) {
+    _project = project;
+    setProjectPath(path);
     notifyListeners();
   }
 

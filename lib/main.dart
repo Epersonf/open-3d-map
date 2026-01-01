@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_3d_mapper/presentation/components/file_explorer/file_explorer.dart';
 import 'presentation/components/layout/top_bar.dart';
 import 'presentation/components/inspector/inspector_panel.dart';
+import 'presentation/components/hierarchy/hierarchy_panel.dart';
 import 'stores/project_store.dart';
 
 void main() {
@@ -61,14 +62,48 @@ class HomePage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      AnimatedBuilder(
-                        animation: ProjectStore.instance,
-                        builder: (ctx, _) {
-                          if (ProjectStore.instance.projectPath != null) {
-                            return const InspectorPanel();
-                          }
-                          return const SizedBox.shrink();
-                        },
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: AnimatedBuilder(
+                                animation: ProjectStore.instance,
+                                builder: (ctx, _) {
+                                  if (ProjectStore.instance.projectPath != null) {
+                                    return const Center(child: Text('Viewport / Scene area', style: TextStyle(color: Colors.white70)));
+                                  }
+                                  return const Center(child: Text('No project opened', style: TextStyle(color: Colors.white54)));
+                                },
+                              ),
+                            ),
+                            // hierarchy panel (only when project open)
+                            AnimatedBuilder(
+                              animation: ProjectStore.instance,
+                              builder: (ctx, _) {
+                                if (ProjectStore.instance.projectPath != null) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(left: 8.0),
+                                    child: SizedBox(width: 300, child: const HierarchyPanel()),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                            // inspector panel (only when project open)
+                            AnimatedBuilder(
+                              animation: ProjectStore.instance,
+                              builder: (ctx, _) {
+                                if (ProjectStore.instance.projectPath != null) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(left: 8.0),
+                                    child: SizedBox(width: 320, child: const InspectorPanel()),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
