@@ -6,7 +6,11 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
-      "deviceId": "windows"
+      "deviceId": "windows",
+      "toolArgs": [
+        "--enable-flutter-gpu",
+        "--enable-impeller"
+      ]
     },
     {
       "name": "Flutter: Attach (Windows)",
@@ -19,7 +23,11 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "release",
-      "deviceId": "windows"
+      "deviceId": "windows",
+      "toolArgs": [
+        "--enable-flutter-gpu",
+        "--enable-impeller"
+      ]
     }
   ]
 }
