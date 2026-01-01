@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:open_3d_mapper/domain/asset/asset.dart';
 import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
 import '../domain/project/project.dart';
 import '../domain/scene/game_object.dart';
 import '../domain/scene/transform.dart';
@@ -103,11 +104,21 @@ class ProjectStore extends ChangeNotifier {
 
     final rel = p.relative(absolutePath, from: _projectPath!);
     final base = p.basenameWithoutExtension(absolutePath);
-    final id = 'go-${DateTime.now().millisecondsSinceEpoch}';
-    final assetId = rel; // using relative path as asset identifier for now
+    final goId = const Uuid().v4();
+
+    // reuse existing asset if path already registered, otherwise create new with UUID
+    String assetId;
+    final existing = _project!.assets.where((a) => a.path == rel).toList();
+    if (existing.isNotEmpty) {
+      assetId = existing.first.id;
+    } else {
+      assetId = const Uuid().v4();
+      final a = Asset(id: assetId, path: rel, type: p.extension(absolutePath).replaceFirst('.', ''));
+      _project!.assets.add(a);
+    }
 
     final go = GameObject(
-      id: id,
+      id: goId,
       name: base,
       parentId: null,
       assetId: assetId,
