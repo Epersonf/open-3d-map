@@ -42,27 +42,6 @@ class HomePage extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Center(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  content: const Text('Funcionando no desktop!'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Fechar'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Mostrar diálogo'),
-                          ),
-                        ),
-                      ),
-                      Expanded(
                         child: Row(
                           children: [
                             Expanded(
