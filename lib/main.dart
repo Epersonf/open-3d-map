@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_3d_mapper/presentation/components/file_explorer/file_explorer.dart';
 import 'presentation/components/layout/top_bar.dart';
 import 'presentation/components/inspector/inspector_panel.dart';
 
@@ -33,30 +34,38 @@ class HomePage extends StatelessWidget {
         children: [
           const TopBar(),
           Expanded(
-            child: Row(
+            child: Column(
               children: [
                 Expanded(
-                  child: Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            content: const Text('Funcionando no desktop!'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Fechar'),
-                              ),
-                            ],
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  content: const Text('Funcionando no desktop!'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Fechar'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Mostrar diálogo'),
                           ),
-                        );
-                      },
-                      child: const Text('Mostrar diálogo'),
-                    ),
+                        ),
+                      ),
+                      const InspectorPanel(),
+                    ],
                   ),
                 ),
-                const InspectorPanel(),
+                const SizedBox(height: 2),
+                const FileExplorer(),
               ],
             ),
           ),
