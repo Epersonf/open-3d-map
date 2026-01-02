@@ -45,8 +45,7 @@ class _Viewport3DState extends State<Viewport3D>
     _ticker = createTicker((_) {
       controller.update();
       setState(() {});
-    })
-      ..start();
+    })..start();
   }
 
   @override
@@ -68,8 +67,9 @@ class _Viewport3DState extends State<Viewport3D>
         return KeyEventResult.handled;
       },
       child: Listener(
-        onPointerDown: (e) => controller.onPointerDown(e.buttons),
-        onPointerUp: (e) => controller.onPointerUp(e.buttons),
+        onPointerDown: controller.onPointerDown,
+        onPointerUp: controller.onPointerUp,
+        onPointerMove: controller.onPointerMove,
         child: SizedBox.expand(
           child: CustomPaint(
             painter: _ScenePainter(scene, camera),
