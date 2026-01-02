@@ -20,6 +20,7 @@ class FlyCameraController {
   Offset? _lastPointerPos;
 
   double moveSpeed = 0.05;
+  double sprintMoveSpeed = 0.15; // Nova velocidade para quando Shift está pressionado
   double mouseSensitivity = 0.005;
 
   double yaw = 0;
@@ -67,27 +68,37 @@ class FlyCameraController {
     if (_pressed.isEmpty) return;
 
     final forward = _getForward();
-
     // CORRETO AGORA
     final right = forward.cross(camera.up).normalized();
+
+    // Determina a velocidade baseada se Shift está pressionado
+    final double currentMoveSpeed = _isSprinting() ? sprintMoveSpeed : moveSpeed;
 
     Vector3 delta = Vector3.zero();
 
     if (_pressed.contains(LogicalKeyboardKey.keyW)) {
-      delta += forward * moveSpeed;
+      delta += forward * currentMoveSpeed;
     }
     if (_pressed.contains(LogicalKeyboardKey.keyS)) {
-      delta -= forward * moveSpeed;
+      delta -= forward * currentMoveSpeed;
     }
 
     // A = esquerda
     if (_pressed.contains(LogicalKeyboardKey.keyA)) {
-      delta += right * moveSpeed;
+      delta += right * currentMoveSpeed;
     }
 
     // D = direita
     if (_pressed.contains(LogicalKeyboardKey.keyD)) {
-      delta -= right * moveSpeed;
+      delta -= right * currentMoveSpeed;
+    }
+
+    // Movimento vertical: E = cima, Q = baixo
+    if (_pressed.contains(LogicalKeyboardKey.keyE)) {
+      delta += camera.up * currentMoveSpeed;
+    }
+    if (_pressed.contains(LogicalKeyboardKey.keyQ)) {
+      delta -= camera.up * currentMoveSpeed;
     }
 
     if (delta.length2 != 0) {
@@ -108,5 +119,11 @@ class FlyCameraController {
   void _updateCameraTargetFromAngles() {
     final forward = _getForward();
     camera.target = camera.position + forward;
+  }
+
+  // Verifica se Shift está pressionado (esquerdo ou direito)
+  bool _isSprinting() {
+    return _pressed.contains(LogicalKeyboardKey.shiftLeft) ||
+        _pressed.contains(LogicalKeyboardKey.shiftRight);
   }
 }
