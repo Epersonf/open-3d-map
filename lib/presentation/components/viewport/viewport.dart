@@ -30,6 +30,8 @@ class _Viewport3DState extends State<Viewport3D>
 
     controller = FlyCameraController(camera);
 
+
+    // TODO: INSTANTIATE SCENE CONTENT HERE
     final cube = Mesh(
       CuboidGeometry(Vector3(1, 1, 1)),
       PhysicallyBasedMaterial(environment: scene.environment)
