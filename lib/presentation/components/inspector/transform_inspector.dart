@@ -40,22 +40,51 @@ class _TransformInspectorState extends State<TransformInspector> {
   }
 
   Widget _tripleField(String label, TextEditingController a, TextEditingController b, TextEditingController c) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white70)),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(child: TextField(controller: a, decoration: const InputDecoration(labelText: 'X'))),
-            const SizedBox(width: 8),
-            Expanded(child: TextField(controller: b, decoration: const InputDecoration(labelText: 'Y'))),
-            const SizedBox(width: 8),
-            Expanded(child: TextField(controller: c, decoration: const InputDecoration(labelText: 'Z'))),
-          ],
-        ),
-        const SizedBox(height: 12),
-      ],
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: a,
+                  decoration: const InputDecoration(
+                    labelText: 'X',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: b,
+                  decoration: const InputDecoration(
+                    labelText: 'Y',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: c,
+                  decoration: const InputDecoration(
+                    labelText: 'Z',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -84,43 +113,70 @@ class _TransformInspectorState extends State<TransformInspector> {
         sz.text = sel.transform.scale.z.toString();
       }
 
-      return Container(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            _tripleField('Position', px, py, pz),
-            _tripleField('Rotation', rx, ry, rz),
-            _tripleField('Scale', sx, sy, sz),
-            Row(
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _tripleField('Position', px, py, pz),
+          _tripleField('Rotation', rx, ry, rz),
+          _tripleField('Scale', sx, sy, sz),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
               children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // apply transform
-                    final newTransform = Transform(
-                      position: Vec3(x: double.tryParse(px.text) ?? 0.0, y: double.tryParse(py.text) ?? 0.0, z: double.tryParse(pz.text) ?? 0.0),
-                      rotation: Vec3(x: double.tryParse(rx.text) ?? 0.0, y: double.tryParse(ry.text) ?? 0.0, z: double.tryParse(rz.text) ?? 0.0),
-                      scale: Vec3(x: double.tryParse(sx.text) ?? 1.0, y: double.tryParse(sy.text) ?? 1.0, z: double.tryParse(sz.text) ?? 1.0),
-                    );
-                    final updated = GameObject(
-                      id: sel.id,
-                      name: sel.name,
-                      parentId: sel.parentId,
-                      assetId: sel.assetId,
-                      transform: newTransform,
-                      tags: Map.from(sel.tags),
-                      children: sel.children,
-                    );
-                    ProjectStore.instance.updateGameObject(updated);
-                    SelectionStore.instance.select(updated);
-                  },
-                  child: const Text('Apply Transform'),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // apply transform
+                      final newTransform = Transform(
+                        position: Vec3(
+                          x: double.tryParse(px.text) ?? 0.0,
+                          y: double.tryParse(py.text) ?? 0.0,
+                          z: double.tryParse(pz.text) ?? 0.0,
+                        ),
+                        rotation: Vec3(
+                          x: double.tryParse(rx.text) ?? 0.0,
+                          y: double.tryParse(ry.text) ?? 0.0,
+                          z: double.tryParse(rz.text) ?? 0.0,
+                        ),
+                        scale: Vec3(
+                          x: double.tryParse(sx.text) ?? 1.0,
+                          y: double.tryParse(sy.text) ?? 1.0,
+                          z: double.tryParse(sz.text) ?? 1.0,
+                        ),
+                      );
+                      final updated = GameObject(
+                        id: sel.id,
+                        name: sel.name,
+                        parentId: sel.parentId,
+                        assetId: sel.assetId,
+                        transform: newTransform,
+                        tags: Map.from(sel.tags),
+                        children: sel.children,
+                      );
+                      ProjectStore.instance.updateGameObject(updated);
+                      SelectionStore.instance.select(updated);
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Transform applied'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                    child: const Text('Apply Transform'),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                TextButton(onPressed: () => SelectionStore.instance.clear(), child: const Text('Deselect')),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => SelectionStore.instance.clear(),
+                    child: const Text('Deselect'),
+                  ),
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       );
     });
   }
