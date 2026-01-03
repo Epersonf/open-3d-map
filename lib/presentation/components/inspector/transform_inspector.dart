@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Transform;
 import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../stores/selection_store.dart';
@@ -25,8 +27,13 @@ class _TransformInspectorState extends State<TransformInspector> {
   final TextEditingController sy = TextEditingController(text: '1');
   final TextEditingController sz = TextEditingController(text: '1');
 
+  String? _currentSelectedId;
+  GameObject? _currentObject;
+  Timer? _applyTimer;
+
   @override
   void dispose() {
+    _applyTimer?.cancel();
     px.dispose();
     py.dispose();
     pz.dispose();
@@ -37,6 +44,47 @@ class _TransformInspectorState extends State<TransformInspector> {
     sy.dispose();
     sz.dispose();
     super.dispose();
+  }
+
+  void _applyTransform() {
+    final sel = SelectionStore.instance.selected;
+    if (sel == null || _currentObject == null) return;
+
+    final newTransform = Transform(
+      position: Vec3(
+        x: double.tryParse(px.text) ?? 0.0,
+        y: double.tryParse(py.text) ?? 0.0,
+        z: double.tryParse(pz.text) ?? 0.0,
+      ),
+      rotation: Vec3(
+        x: double.tryParse(rx.text) ?? 0.0,
+        y: double.tryParse(ry.text) ?? 0.0,
+        z: double.tryParse(rz.text) ?? 0.0,
+      ),
+      scale: Vec3(
+        x: double.tryParse(sx.text) ?? 1.0,
+        y: double.tryParse(sy.text) ?? 1.0,
+        z: double.tryParse(sz.text) ?? 1.0,
+      ),
+    );
+
+    final updated = GameObject(
+      id: sel.id,
+      name: sel.name,
+      parentId: sel.parentId,
+      assetId: sel.assetId,
+      transform: newTransform,
+      tags: Map.from(sel.tags),
+      children: sel.children,
+    );
+
+    ProjectStore.instance.updateGameObject(updated);
+    SelectionStore.instance.select(updated);
+  }
+
+  void _scheduleApply() {
+    _applyTimer?.cancel();
+    _applyTimer = Timer(const Duration(milliseconds: 500), _applyTransform);
   }
 
   Widget _tripleField(String label, TextEditingController a, TextEditingController b, TextEditingController c) {
@@ -57,6 +105,7 @@ class _TransformInspectorState extends State<TransformInspector> {
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     border: OutlineInputBorder(),
                   ),
+                  onChanged: (_) => _scheduleApply(),
                 ),
               ),
               const SizedBox(width: 8),
@@ -68,6 +117,7 @@ class _TransformInspectorState extends State<TransformInspector> {
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     border: OutlineInputBorder(),
                   ),
+                  onChanged: (_) => _scheduleApply(),
                 ),
               ),
               const SizedBox(width: 8),
@@ -79,6 +129,7 @@ class _TransformInspectorState extends State<TransformInspector> {
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     border: OutlineInputBorder(),
                   ),
+                  onChanged: (_) => _scheduleApply(),
                 ),
               ),
             ],
@@ -93,24 +144,34 @@ class _TransformInspectorState extends State<TransformInspector> {
     return Observer(builder: (_) {
       final sel = SelectionStore.instance.selected;
       if (sel == null) {
-        return Container(padding: const EdgeInsets.all(12), child: const Text('No selection', style: TextStyle(color: Colors.white70)));
+        _currentSelectedId = null;
+        _currentObject = null;
+        return Container(
+          padding: const EdgeInsets.all(12),
+          child: const Text(
+            'No object selected',
+            style: TextStyle(color: Colors.white70),
+          ),
+        );
       }
 
       // update controllers only when selection changes
-      // (avoid clobbering while user types)
       if (_currentSelectedId != sel.id) {
+        _applyTimer?.cancel();
         _currentSelectedId = sel.id;
-        px.text = sel.transform.position.x.toString();
-        py.text = sel.transform.position.y.toString();
-        pz.text = sel.transform.position.z.toString();
+        _currentObject = sel;
+        
+        px.text = sel.transform.position.x.toStringAsFixed(2);
+        py.text = sel.transform.position.y.toStringAsFixed(2);
+        pz.text = sel.transform.position.z.toStringAsFixed(2);
 
-        rx.text = sel.transform.rotation.x.toString();
-        ry.text = sel.transform.rotation.y.toString();
-        rz.text = sel.transform.rotation.z.toString();
+        rx.text = sel.transform.rotation.x.toStringAsFixed(2);
+        ry.text = sel.transform.rotation.y.toStringAsFixed(2);
+        rz.text = sel.transform.rotation.z.toStringAsFixed(2);
 
-        sx.text = sel.transform.scale.x.toString();
-        sy.text = sel.transform.scale.y.toString();
-        sz.text = sel.transform.scale.z.toString();
+        sx.text = sel.transform.scale.x.toStringAsFixed(2);
+        sy.text = sel.transform.scale.y.toStringAsFixed(2);
+        sz.text = sel.transform.scale.z.toStringAsFixed(2);
       }
 
       return Column(
@@ -119,67 +180,8 @@ class _TransformInspectorState extends State<TransformInspector> {
           _tripleField('Position', px, py, pz),
           _tripleField('Rotation', rx, ry, rz),
           _tripleField('Scale', sx, sy, sz),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // apply transform
-                      final newTransform = Transform(
-                        position: Vec3(
-                          x: double.tryParse(px.text) ?? 0.0,
-                          y: double.tryParse(py.text) ?? 0.0,
-                          z: double.tryParse(pz.text) ?? 0.0,
-                        ),
-                        rotation: Vec3(
-                          x: double.tryParse(rx.text) ?? 0.0,
-                          y: double.tryParse(ry.text) ?? 0.0,
-                          z: double.tryParse(rz.text) ?? 0.0,
-                        ),
-                        scale: Vec3(
-                          x: double.tryParse(sx.text) ?? 1.0,
-                          y: double.tryParse(sy.text) ?? 1.0,
-                          z: double.tryParse(sz.text) ?? 1.0,
-                        ),
-                      );
-                      final updated = GameObject(
-                        id: sel.id,
-                        name: sel.name,
-                        parentId: sel.parentId,
-                        assetId: sel.assetId,
-                        transform: newTransform,
-                        tags: Map.from(sel.tags),
-                        children: sel.children,
-                      );
-                      ProjectStore.instance.updateGameObject(updated);
-                      SelectionStore.instance.select(updated);
-                      
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Transform applied'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    child: const Text('Apply Transform'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => SelectionStore.instance.clear(),
-                    child: const Text('Deselect'),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       );
     });
   }
-
-  String? _currentSelectedId;
 }
