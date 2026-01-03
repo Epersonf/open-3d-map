@@ -72,20 +72,40 @@ class _Viewport3DState extends State<Viewport3D> {
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
       onKeyEvent: freeCam.onKey,
-        child: GestureDetector(
-        onTapDown: (details) => selectionController?.onTapDown(details, _viewportKey.currentContext!),
-        child: Listener(
-          onPointerDown: freeCam.onPointerDown,
-          onPointerUp: freeCam.onPointerUp,
-          onPointerMove: (event) {
-            freeCam.onPointerMove(event);
-            selectionController?.onPointerMove(event, _viewportKey.currentContext!);
-          },
-          child: SizedBox.expand(
-            key: _viewportKey,
-            child: threeJs.build(),
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Atualizar o tamanho do renderizador e aspect ratio da câmera
+          // quando as dimensões do widget mudarem
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (threeJs.width != constraints.maxWidth ||
+                threeJs.height != constraints.maxHeight) {
+              threeJs.renderer?.setSize(constraints.maxWidth, constraints.maxHeight);
+
+              // Atualizar aspect ratio da câmera
+              if (threeJs.camera is three.PerspectiveCamera) {
+                final camera = threeJs.camera as three.PerspectiveCamera;
+                camera.aspect = constraints.maxWidth / constraints.maxHeight;
+                camera.updateProjectionMatrix();
+              }
+            }
+          });
+
+          return GestureDetector(
+            onTapDown: (details) => selectionController?.onTapDown(details, _viewportKey.currentContext!),
+            child: Listener(
+              onPointerDown: freeCam.onPointerDown,
+              onPointerUp: freeCam.onPointerUp,
+              onPointerMove: (event) {
+                freeCam.onPointerMove(event);
+                selectionController?.onPointerMove(event, _viewportKey.currentContext!);
+              },
+              child: SizedBox.expand(
+                key: _viewportKey,
+                child: threeJs.build(),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
