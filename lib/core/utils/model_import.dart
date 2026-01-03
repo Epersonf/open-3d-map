@@ -1,25 +1,25 @@
-import 'dart:io';
-
-import 'dart:typed_data';
-import 'package:flutter_scene/scene.dart';
-import 'package:flutter_scene_importer/offline_import.dart';
-import 'package:flutter_scene_importer/importer.dart';
+import 'package:three_js/three_js.dart' as three;
 
 class ModelImport {
-  static Map<String, Node> _modelCache = Map<String, Node>();
-
-  static Future<Node> loadModel(String absolutePath) async {
-    if (_modelCache.containsKey(absolutePath)) {
-      return _modelCache[absolutePath]!.clone();
+  static Future<three.Object3D?> loadModel(String filePath) async {
+    final extension = filePath.toLowerCase().split('.').last;
+    
+    try {
+      if (extension == 'glb' || extension == 'gltf') {
+        final loader = three.GLTFLoader();
+        final gltf = await loader.fromPath(filePath);
+        return gltf?.scene;
+      } else if (extension == 'fbx') {
+        final loader = three.FBXLoader();
+        return await loader.fromPath(filePath);
+      } else if (extension == 'obj') {
+        final loader = three.OBJLoader();
+        return await loader.fromPath(filePath);
+      }
+    } catch (e) {
+      print('Error loading model $filePath: $e');
     }
-    final bytes = await File(absolutePath).readAsBytes();
-    final byteData = ByteData.sublistView(bytes);
-    final node = await Node.fromFlatbuffer(byteData);
-    _modelCache[absolutePath] = node;
-    return node.clone();
-  }
-
-  static void clearCache() {
-    _modelCache.clear();
+    
+    return null;
   }
 }

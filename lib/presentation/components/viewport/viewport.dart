@@ -1,12 +1,5 @@
-import 'package:flutter/material.dart' hide Matrix4;
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart' hide Matrix4;
-import 'package:open_3d_mapper/presentation/components/viewport/fly_camera_controller.dart';
-import 'package:vector_math/vector_math.dart';
-import 'package:flutter_scene/scene.dart';
-import 'package:open_3d_mapper/stores/project_store.dart';
-import 'package:open_3d_mapper/core/utils/model_import.dart';
-import 'package:open_3d_mapper/domain/asset/asset.dart';
+import 'package:flutter/material.dart';
+import 'package:three_js/three_js.dart' as three;
 
 class Viewport3D extends StatefulWidget {
   const Viewport3D({super.key});
@@ -15,139 +8,68 @@ class Viewport3D extends StatefulWidget {
   State<Viewport3D> createState() => _Viewport3DState();
 }
 
-class _Viewport3DState extends State<Viewport3D>
-    with SingleTickerProviderStateMixin {
-  late PerspectiveCamera camera;
-  late FlyCameraController controller;
-  late final Ticker _ticker;
-
-  final Scene scene = Scene();
-  final List<Node> _spawned = [];
-
-  bool ready = false;
+class _Viewport3DState extends State<Viewport3D> {
+  late three.ThreeJS threeJs;
 
   @override
   void initState() {
     super.initState();
 
-    camera = PerspectiveCamera(
-      position: Vector3(0, 0, 5),
-      target: Vector3.zero(),
+    threeJs = three.ThreeJS(
+      setup: setupScene,
+      onSetupComplete: () {
+        // opcional, só pra forçar rebuild se vc quiser reagir a algo
+        if (mounted) setState(() {});
+      },
     );
-
-    controller = FlyCameraController(camera);
-
-    Scene.initializeStaticResources().then((_) async {
-      await _loadProjectScene();
-      if (mounted) setState(() => ready = true);
-    });
-
-    _ticker = createTicker((_) {
-      controller.update();
-      if (ready && mounted) setState(() {});
-    })..start();
-  }
-
-  Future<void> _loadProjectScene() async {
-    for (final n in _spawned) {
-      scene.remove(n);
-    }
-    _spawned.clear();
-
-    final project = ProjectStore.instance.project;
-    if (project == null || project.scenes.isEmpty) return;
-
-    final root = project.scenes.first.rootObjects;
-
-    for (final go in root) {
-      if (go.assetId == null) continue;
-
-      final asset = project.assets.firstWhere(
-        (a) => a.id == go.assetId,
-        orElse: () => Asset(id: '', path: '', type: ''),
-      );
-      if (asset.path.isEmpty) continue;
-
-      try {
-        final node = await ModelImport.loadModel('${ProjectStore.instance.projectPath}\\${asset.path}');
-
-        node.localTransform = Matrix4.compose(
-          Vector3(
-            go.transform.position.x,
-            go.transform.position.y,
-            go.transform.position.z,
-          ),
-          Quaternion.euler(
-            radians(go.transform.rotation.x),
-            radians(go.transform.rotation.y),
-            radians(go.transform.rotation.z),
-          ),
-          Vector3(
-            go.transform.scale.x,
-            go.transform.scale.y,
-            go.transform.scale.z,
-          ),
-        );
-
-        scene.add(node);
-        _spawned.add(node);
-      } catch (e) {
-        debugPrint('Error loading model: $e');
-      }
-    }
   }
 
   @override
   void dispose() {
-    for (final n in _spawned) {
-      scene.remove(n);
-    }
-    _ticker.dispose();
+    threeJs.dispose();
+    three.loading.clear();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!ready) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Focus(
-      autofocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) controller.onKeyDown(event.logicalKey);
-        if (event is KeyUpEvent) controller.onKeyUp(event.logicalKey);
-        return KeyEventResult.handled;
-      },
-      child: Listener(
-        onPointerDown: controller.onPointerDown,
-        onPointerUp: controller.onPointerUp,
-        onPointerMove: controller.onPointerMove,
-        child: SizedBox.expand(
-          child: CustomPaint(
-            painter: _ScenePainter(scene, camera),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ScenePainter extends CustomPainter {
-  final Scene scene;
-  final Camera camera;
-
-  _ScenePainter(this.scene, this.camera);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    scene.render(
-      camera,
-      canvas,
-      viewport: Offset.zero & size,
+    // IMPORTANTÍSSIMO: sempre renderizar o threeJs.build(),
+    // senão o setup nunca roda e o onSetupComplete nunca dispara.
+    return SizedBox.expand(
+      child: threeJs.build(),
     );
   }
 
-  @override
-  bool shouldRepaint(_) => true;
+  Future<void> setupScene() async {
+    threeJs.scene = three.Scene();
+    threeJs.scene.background = three.Color.fromHex32(0x222222);
+
+    threeJs.camera = three.PerspectiveCamera(
+      60,
+      threeJs.width / threeJs.height,
+      0.1,
+      1000,
+    );
+    threeJs.camera.position.setValues(3, 4, 8);
+    threeJs.camera.lookAt(threeJs.scene.position);
+
+    final ambient = three.AmbientLight(0xffffff, 0.6);
+    threeJs.scene.add(ambient);
+
+    final dir = three.DirectionalLight(0xffffff, 0.8);
+    dir.position.setValues(5, 10, 7);
+    threeJs.scene.add(dir);
+
+    final cubeGeometry = three.BoxGeometry(1, 1, 1);
+    final cubeMaterial = three.MeshPhongMaterial.fromMap({
+      'color': 0x00ff00,
+    });
+    final cube = three.Mesh(cubeGeometry, cubeMaterial);
+    threeJs.scene.add(cube);
+
+    threeJs.addAnimationEvent((dt) {
+      cube.rotation.y += dt;
+      cube.rotation.x += dt * 0.5;
+    });
+  }
 }
