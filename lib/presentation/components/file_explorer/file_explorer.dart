@@ -20,7 +20,7 @@ class FileExplorer extends StatelessWidget {
         builder: (context, _) {
           final store = ProjectStore.instance;
           if (store.projectPath == null || store.assetsRoot == null) {
-            return const Center(child: Text('No project opened', style: TextStyle(color: Colors.white70)));
+            return Container();
           }
 
           final current = store.currentPath ?? store.assetsRoot!;

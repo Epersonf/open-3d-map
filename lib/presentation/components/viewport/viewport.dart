@@ -12,7 +12,7 @@ class Viewport3D extends StatefulWidget {
 
 class _Viewport3DState extends State<Viewport3D> {
   late three.ThreeJS threeJs;
-  FreeCameraController? freeCam;
+  late FreeCameraController freeCam;
 
   @override
   void initState() {
@@ -22,10 +22,14 @@ class _Viewport3DState extends State<Viewport3D> {
       setup: setupScene,
       onSetupComplete: () {},
     );
+
+    // 👇 Já cria o controller aqui
+    freeCam = FreeCameraController(threeJs);
   }
 
   @override
   void dispose() {
+    freeCam.dispose();
     threeJs.dispose();
     three.loading.clear();
     super.dispose();
@@ -33,8 +37,17 @@ class _Viewport3DState extends State<Viewport3D> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.expand(
-      child: threeJs.build(),
+    return KeyboardListener(
+      focusNode: FocusNode()..requestFocus(),
+      onKeyEvent: freeCam.onKey,
+      child: Listener(
+        onPointerDown: freeCam.onPointerDown,
+        onPointerUp: freeCam.onPointerUp,
+        onPointerMove: freeCam.onPointerMove,
+        child: SizedBox.expand(
+          child: threeJs.build(),
+        ),
+      ),
     );
   }
 
@@ -49,6 +62,7 @@ class _Viewport3DState extends State<Viewport3D> {
       2000,
     );
 
+    threeJs.camera.rotation.order = three.RotationOrders.yxz;
     threeJs.camera.position.setValues(0, 2, 8);
 
     threeJs.scene.add(three.AmbientLight(0xffffff, 0.6));
@@ -59,14 +73,12 @@ class _Viewport3DState extends State<Viewport3D> {
 
     final geo = three.BoxGeometry(1, 1, 1);
     final mat = three.MeshStandardMaterial();
-    mat.color = three.Color.fromHex32(0x00ff00);
+    mat.color = three.Color.fromHex32(0x4080ff);
     final cube = three.Mesh(geo, mat);
     threeJs.scene.add(cube);
 
     threeJs.addAnimationEvent((dt) {
       cube.rotation.y += dt;
     });
-
-    freeCam = FreeCameraController(threeJs);
   }
 }

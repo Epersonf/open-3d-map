@@ -1,15 +1,14 @@
 import 'dart:math' as Math;
-
+import 'dart:ui';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:three_js/three_js.dart' as three;
 
 class FreeCameraController {
   final three.ThreeJS threeJs;
 
-  late three.Camera camera;
-
   bool rightMouseDown = false;
-
   final Set<LogicalKeyboardKey> keys = {};
 
   double baseSpeed = 6.0;
@@ -17,49 +16,89 @@ class FreeCameraController {
   double lookSpeed = 2.5;
 
   FreeCameraController(this.threeJs) {
-    camera = threeJs.camera;
-
     threeJs.addAnimationEvent(_update);
+  }
+
+  void onPointerDown(PointerDownEvent e) {
+    if (e.kind == PointerDeviceKind.mouse &&
+        e.buttons == kSecondaryMouseButton) {
+      rightMouseDown = true;
+    }
+  }
+
+  void onPointerUp(PointerUpEvent e) {
+    if (e.kind == PointerDeviceKind.mouse) {
+      rightMouseDown = false;
+    }
+  }
+
+  void onPointerMove(PointerMoveEvent e) {
+    if (!rightMouseDown) return;
+
+    final cam = threeJs.camera;
+
+    cam.rotation.y -= e.delta.dx * 0.0025 * lookSpeed;
+
+    cam.rotation.x -= e.delta.dy * 0.0025 * lookSpeed;
+
+    const double maxPitch = 1.45;
+    if (cam.rotation.x > maxPitch) cam.rotation.x = maxPitch;
+    if (cam.rotation.x < -maxPitch) cam.rotation.x = -maxPitch;
+
+    cam.rotation.z = 0;
+  }
+
+  void onKey(KeyEvent e) {
+    final key = e.logicalKey;
+
+    if (e is KeyDownEvent) {
+      keys.add(key);
+    } else if (e is KeyUpEvent) {
+      keys.remove(key);
+    }
   }
 
   void _update(double dt) {
     if (!rightMouseDown) return;
 
-    double speed = baseSpeed * dt;
+    final cam = threeJs.camera;
 
+    double speed = baseSpeed * dt;
     if (keys.contains(LogicalKeyboardKey.shiftLeft)) {
       speed *= runMultiplier;
     }
 
     final forward = three.Vector3(
-      -Math.sin(camera.rotation.y),
+      -Math.sin(cam.rotation.y),
       0,
-      -Math.cos(camera.rotation.y),
+      -Math.cos(cam.rotation.y),
     );
 
     final right = three.Vector3(
-      Math.cos(camera.rotation.y),
+      Math.cos(cam.rotation.y),
       0,
-      -Math.sin(camera.rotation.y),
+      -Math.sin(cam.rotation.y),
     );
 
     if (keys.contains(LogicalKeyboardKey.keyW)) {
-      camera.position.addScaled(forward, speed);
+      cam.position.addScaled(forward, speed);
     }
     if (keys.contains(LogicalKeyboardKey.keyS)) {
-      camera.position.addScaled(forward, -speed);
+      cam.position.addScaled(forward, -speed);
     }
     if (keys.contains(LogicalKeyboardKey.keyA)) {
-      camera.position.addScaled(right, -speed);
+      cam.position.addScaled(right, -speed);
     }
     if (keys.contains(LogicalKeyboardKey.keyD)) {
-      camera.position.addScaled(right, speed);
+      cam.position.addScaled(right, speed);
     }
     if (keys.contains(LogicalKeyboardKey.keyE)) {
-      camera.position.y += speed;
+      cam.position.y += speed;
     }
     if (keys.contains(LogicalKeyboardKey.keyQ)) {
-      camera.position.y -= speed;
+      cam.position.y -= speed;
     }
   }
+
+  void dispose() {}
 }
