@@ -212,4 +212,34 @@ class ProjectStore extends ChangeNotifier {
     }
     return deleted;
   }
+
+  /// Find a GameObject by ID in the project
+  GameObject? findGameObjectById(String id) {
+    if (_project == null) return null;
+
+    for (final scene in _project!.scenes) {
+      GameObject? findInList(List<GameObject> list) {
+        for (final obj in list) {
+          if (obj.id == id) {
+            return obj;
+          }
+
+          if (obj.children.isNotEmpty) {
+            final found = findInList(obj.children);
+            if (found != null) {
+              return found;
+            }
+          }
+        }
+        return null;
+      }
+
+      final found = findInList(scene.rootObjects);
+      if (found != null) {
+        return found;
+      }
+    }
+
+    return null;
+  }
 }

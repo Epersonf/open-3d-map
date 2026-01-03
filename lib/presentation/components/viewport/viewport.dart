@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:mobx/mobx.dart' hide Listener;
 import 'package:three_js/three_js.dart' as three;
 import 'package:path/path.dart' as p;
 
 import '../../../core/utils/model_import.dart';
 import '../../../stores/project_store.dart';
+import '../../../stores/selection_store.dart';
 import '../../../domain/scene/game_object.dart';
 import '../../../domain/asset/asset.dart';
 import 'free_camera_controller.dart';
@@ -22,7 +24,14 @@ class _Viewport3DState extends State<Viewport3D> {
   late FreeCameraController freeCam;
   final Map<String, three.Object3D> _loadedObjects = {};
   final Map<String, three.Object3D> _gameObjectInstances = {};
+  final Map<String, GameObject> _gameObjectMap = {}; // Mapeamento ID -> GameObject
   VoidCallback? _projectListener;
+  ReactionDisposer? _selectionDisposer;
+  final GlobalKey _viewportKey = GlobalKey();
+
+  // Raycasting
+  final three.Raycaster _raycaster = three.Raycaster();
+  final three.Vector2 _mouse = three.Vector2(0, 0);
 
   @override
   void initState() {
@@ -38,6 +47,9 @@ class _Viewport3DState extends State<Viewport3D> {
     // Listen for project changes
     _projectListener = updateSceneFromProject;
     ProjectStore.instance.addListener(_projectListener!);
+
+    // Listen for selection changes
+    _setupSelectionListener();
   }
 
   @override
@@ -45,6 +57,10 @@ class _Viewport3DState extends State<Viewport3D> {
     if (_projectListener != null) {
       ProjectStore.instance.removeListener(_projectListener!);
       _projectListener = null;
+    }
+    if (_selectionDisposer != null) {
+      _selectionDisposer!();
+      _selectionDisposer = null;
     }
     freeCam.dispose();
     threeJs.dispose();
@@ -57,15 +73,88 @@ class _Viewport3DState extends State<Viewport3D> {
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
       onKeyEvent: freeCam.onKey,
-      child: Listener(
-        onPointerDown: freeCam.onPointerDown,
-        onPointerUp: freeCam.onPointerUp,
-        onPointerMove: freeCam.onPointerMove,
-        child: SizedBox.expand(
-          child: threeJs.build(),
+      child: GestureDetector(
+        onTapDown: _handleTapDown,
+        child: Listener(
+          onPointerDown: (event) {
+            freeCam.onPointerDown(event);
+          },
+          onPointerUp: (event) {
+            freeCam.onPointerUp(event);
+          },
+          onPointerMove: (event) {
+            freeCam.onPointerMove(event);
+
+            // Atualizar posição do mouse para raycasting
+            final RenderBox? box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+            if (box == null) return;
+            final offset = box.globalToLocal(event.position);
+
+            _mouse.x = (offset.dx / threeJs.width) * 2 - 1;
+            _mouse.y = -(offset.dy / threeJs.height) * 2 + 1;
+          },
+          child: SizedBox.expand(
+            key: _viewportKey,
+            child: threeJs.build(),
+          ),
         ),
       ),
     );
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    // Atualizar posição do mouse
+    final RenderBox? box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final offset = box.globalToLocal(details.globalPosition);
+
+    _mouse.x = (offset.dx / threeJs.width) * 2 - 1;
+    _mouse.y = -(offset.dy / threeJs.height) * 2 + 1;
+
+    // Executar raycasting
+    _performRaycast();
+  }
+
+  void _performRaycast() {
+    _raycaster.setFromCamera(_mouse, threeJs.camera);
+
+    // Obter todos os objetos que podem ser clicados
+    final List<three.Object3D> intersectedObjects = [];
+    for (final instance in _gameObjectInstances.values) {
+      instance.traverse((object) {
+        if (object is three.Mesh) {
+          intersectedObjects.add(object);
+        }
+      });
+    }
+
+    // Encontrar interseções
+    final intersects = _raycaster.intersectObjects(intersectedObjects, true);
+
+    if (intersects.isNotEmpty) {
+      // Encontrar o GameObject correspondente ao objeto clicado
+      var clickedObject = intersects.first.object;
+
+      // Subir na hierarquia até encontrar um objeto com gameObjectId
+      while (clickedObject != null && clickedObject.userData['gameObjectId'] == null) {
+        clickedObject = clickedObject.parent;
+      }
+
+      if (clickedObject != null && clickedObject.userData['gameObjectId'] != null) {
+        final gameObjectId = clickedObject.userData['gameObjectId'] as String;
+        final gameObject = ProjectStore.instance.findGameObjectById(gameObjectId);
+
+        if (gameObject != null) {
+          SelectionStore.instance.select(gameObject);
+          // Destacar objeto selecionado
+          _highlightSelectedObject(gameObject);
+        }
+      }
+    } else {
+      // Nenhum objeto clicado - deselecionar
+      SelectionStore.instance.clear();
+      _highlightSelectedObject(null);
+    }
   }
 
   Future<void> setupScene() async {
@@ -100,6 +189,9 @@ class _Viewport3DState extends State<Viewport3D> {
       return;
     }
 
+    // Limpar mapeamento
+    _gameObjectMap.clear();
+
     // Get the first scene (for now)
     final scene = project.scenes.first;
 
@@ -115,9 +207,12 @@ class _Viewport3DState extends State<Viewport3D> {
       instance.removeFromParent();
     }
     _gameObjectInstances.clear();
+    _gameObjectMap.clear();
   }
 
   void processGameObject(GameObject gameObject, three.Object3D? parent) {
+    // Ensure mapping
+    _gameObjectMap[gameObject.id] = gameObject;
     // Check if this object already exists in scene
     if (_gameObjectInstances.containsKey(gameObject.id)) {
       updateExistingGameObject(gameObject);
@@ -218,6 +313,9 @@ class _Viewport3DState extends State<Viewport3D> {
     // Set name for debugging
     object3d.name = gameObject.name;
 
+    // Store gameObjectId in userData for raycasting
+    object3d.userData['gameObjectId'] = gameObject.id;
+
     // Apply transform
     object3d.position.setValues(
       gameObject.transform.position.x,
@@ -262,5 +360,42 @@ class _Viewport3DState extends State<Viewport3D> {
     final cube = three.Mesh(geometry, material);
     cube.name = 'Fallback: $assetId';
     return cube;
+  }
+
+  void _highlightSelectedObject(GameObject? selected) {
+    // Primeiro, remover destaque de todos os objetos
+    for (final instance in _gameObjectInstances.values) {
+      instance.traverse((object) {
+        if (object is three.Mesh) {
+          if (object.material is three.MeshStandardMaterial) {
+            final material = object.material as three.MeshStandardMaterial;
+            // Remover emissão
+            material.emissive = three.Color.fromHex32(0x000000);
+            material.emissiveIntensity = 0.0;
+          }
+        }
+      });
+    }
+
+    // Destacar objeto selecionado
+    if (selected != null && _gameObjectInstances.containsKey(selected.id)) {
+      final selectedInstance = _gameObjectInstances[selected.id]!;
+      selectedInstance.traverse((object) {
+        if (object is three.Mesh) {
+          if (object.material is three.MeshStandardMaterial) {
+            final material = object.material as three.MeshStandardMaterial;
+            // Amarelo suave
+            material.emissive = three.Color.fromHex32(0x444400);
+            material.emissiveIntensity = 0.5;
+          }
+        }
+      });
+    }
+  }
+
+  void _setupSelectionListener() {
+    _selectionDisposer = reaction((_) => SelectionStore.instance.selected, (GameObject? sel) {
+      _highlightSelectedObject(sel);
+    }, fireImmediately: true);
   }
 }
