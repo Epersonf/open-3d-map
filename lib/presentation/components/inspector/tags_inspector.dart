@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:open_3d_mapper/presentation/components/inspector/tag_modal.dart';
 import '../../../domain/tag/tag.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/project_store.dart';
@@ -15,7 +16,6 @@ class TagsInspector extends StatefulWidget {
 class _TagsInspectorState extends State<TagsInspector> {
   final List<Tag> _tags = [];
   String? _currentSelectedId;
-  GameObject? _currentObject;
 
   void _applyTags() {
     final sel = SelectionStore.instance.selected;
@@ -41,7 +41,6 @@ class _TagsInspectorState extends State<TagsInspector> {
       final sel = SelectionStore.instance.selected;
       if (sel == null) {
         _currentSelectedId = null;
-        _currentObject = null;
         return Container(
           padding: const EdgeInsets.all(12),
           child: const Text(
@@ -54,7 +53,6 @@ class _TagsInspectorState extends State<TagsInspector> {
       // Update tags when selection changes
       if (_currentSelectedId != sel.id) {
         _currentSelectedId = sel.id;
-        _currentObject = sel;
         _tags.clear();
         sel.tags.forEach((k, v) => _tags.add(Tag(k, v)));
       }
@@ -76,7 +74,7 @@ class _TagsInspectorState extends State<TagsInspector> {
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 TextButton.icon(
-                  onPressed: () => _showAddEditTagDialog(context),
+                  onPressed: () => _openTagModal(context),
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('Add Tag'),
                   style: TextButton.styleFrom(
@@ -124,7 +122,7 @@ class _TagsInspectorState extends State<TagsInspector> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18, color: Colors.blueAccent),
-                            onPressed: () => _showAddEditTagDialog(context, tag: tag, index: idx),
+                            onPressed: () => _openTagModal(context, tag: tag, index: idx),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, size: 18, color: Colors.redAccent),
@@ -132,7 +130,7 @@ class _TagsInspectorState extends State<TagsInspector> {
                           ),
                         ],
                       ),
-                      onTap: () => _showAddEditTagDialog(context, tag: tag, index: idx),
+                      onTap: () => _openTagModal(context, tag: tag, index: idx),
                       dense: true,
                     ),
                   );
@@ -144,102 +142,11 @@ class _TagsInspectorState extends State<TagsInspector> {
     });
   }
 
-  void _showAddEditTagDialog(BuildContext context, {Tag? tag, int? index}) async {
-    final isEditing = tag != null;
-    final keyController = TextEditingController(text: tag?.key ?? '');
-    final valueController = TextEditingController(text: tag?.value ?? '');
-
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: Text(
-            isEditing ? 'Edit Tag' : 'Add Tag',
-            style: const TextStyle(color: Colors.white),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                TextField(
-                  controller: keyController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Key',
-                    labelStyle: const TextStyle(color: Colors.white70),
-                    border: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.white24),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.blue),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFF2A2A2A),
-                  ),
-                  autofocus: true,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Value (supports multi-line):',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white24),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: TextField(
-                    controller: valueController,
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 6,
-                    minLines: 3,
-                    decoration: const InputDecoration(
-                      contentPadding: EdgeInsets.all(12),
-                      border: InputBorder.none,
-                      hintText: 'Enter tag value...',
-                      hintStyle: TextStyle(color: Colors.white54),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tip: Use Shift+Enter for new lines',
-                  style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final key = keyController.text.trim();
-                final value = valueController.text;
-                if (key.isEmpty) return;
-                Navigator.of(context).pop({'key': key, 'value': value});
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1976D2),
-              ),
-              child: Text(isEditing ? 'Save' : 'Add'),
-            ),
-          ],
-        );
-      },
-    );
-
+  Future<void> _openTagModal(BuildContext context, {Tag? tag, int? index}) async {
+    final result = await showTagModal(context, tag: tag);
     if (result != null) {
       setState(() {
-        if (isEditing && index != null) {
+        if (tag != null && index != null) {
           _tags[index] = Tag(result['key']!, result['value']!);
         } else {
           _tags.add(Tag(result['key']!, result['value']!));
