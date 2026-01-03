@@ -1,5 +1,3 @@
-import 'dart:math' as Math;
-import 'dart:ui';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -64,21 +62,18 @@ class FreeCameraController {
     final cam = threeJs.camera;
 
     double speed = baseSpeed * dt;
-    if (keys.contains(LogicalKeyboardKey.shiftLeft)) {
+    if (keys.contains(LogicalKeyboardKey.shiftLeft) ||
+        keys.contains(LogicalKeyboardKey.shiftRight)) {
       speed *= runMultiplier;
     }
 
-    final forward = three.Vector3(
-      -Math.sin(cam.rotation.y),
-      0,
-      -Math.cos(cam.rotation.y),
-    );
+    // direção real no espaço
+    final forward = three.Vector3.zero();
+    cam.getWorldDirection(forward);
 
-    final right = three.Vector3(
-      Math.cos(cam.rotation.y),
-      0,
-      -Math.sin(cam.rotation.y),
-    );
+    // remove componente vertical do right para não inclinar strafing
+    final right = three.Vector3(0, 1, 0).cross(forward);
+    right.normalize();
 
     if (keys.contains(LogicalKeyboardKey.keyW)) {
       cam.position.addScaled(forward, speed);
