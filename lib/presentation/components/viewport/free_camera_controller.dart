@@ -82,10 +82,10 @@ class FreeCameraController {
       cam.position.addScaled(forward, -speed);
     }
     if (keys.contains(LogicalKeyboardKey.keyA)) {
-      cam.position.addScaled(right, -speed);
+      cam.position.addScaled(right, speed);
     }
     if (keys.contains(LogicalKeyboardKey.keyD)) {
-      cam.position.addScaled(right, speed);
+      cam.position.addScaled(right, -speed);
     }
     if (keys.contains(LogicalKeyboardKey.keyE)) {
       cam.position.y += speed;
