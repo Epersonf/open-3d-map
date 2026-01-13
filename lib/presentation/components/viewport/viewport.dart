@@ -8,6 +8,7 @@ import '../../../stores/selection_store.dart';
 import '../../../domain/scene/game_object.dart';
 import '../../../domain/asset/asset.dart';
 import 'controllers/selection_controller.dart';
+import 'controllers/gizmo_controller.dart';
 import 'managers/scene_manager.dart';
 import 'managers/model_manager.dart';
 import 'objects/scene_object.dart';
@@ -25,6 +26,9 @@ class _Viewport3DState extends State<Viewport3D> {
   late SceneManager sceneManager;
   late ModelManager modelManager;
   SelectionController? selectionController;
+  GizmoController? gizmoController;
+  // Indica que a cena ThreeJS foi inicializada e `threeJs.camera` está disponível
+  bool _ready = false;
   
   VoidCallback? _projectListener;
   ReactionDisposer? _selectionDisposer;
@@ -77,6 +81,9 @@ class _Viewport3DState extends State<Viewport3D> {
           // Atualizar o tamanho do renderizador e aspect ratio da câmera
           // quando as dimensões do widget mudarem
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            // Não tocar na câmera/renderer antes da cena estar pronta
+            if (!_ready) return;
+
             if (threeJs.width != constraints.maxWidth ||
                 threeJs.height != constraints.maxHeight) {
               threeJs.renderer?.setSize(constraints.maxWidth, constraints.maxHeight);
@@ -91,11 +98,34 @@ class _Viewport3DState extends State<Viewport3D> {
           });
 
           return GestureDetector(
-            onTapDown: (details) => selectionController?.onTapDown(details, _viewportKey.currentContext!),
+            onTapDown: (details) {
+              // Segurança: não tente selecionar antes da cena estar pronta
+              if (!_ready) return;
+
+              final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+              final hitGizmo = renderBox != null
+                  ? (gizmoController?.onTapDown(details, _viewportKey.currentContext!, renderBox.size) ?? false)
+                  : false;
+
+              if (hitGizmo) return;
+
+              selectionController?.onTapDown(details, _viewportKey.currentContext!);
+            },
             child: Listener(
-              onPointerDown: freeCam.onPointerDown,
-              onPointerUp: freeCam.onPointerUp,
+              onPointerDown: (e) {
+                if (gizmoController?.isDragging == true) return;
+                freeCam.onPointerDown(e);
+              },
+              onPointerUp: (e) {
+                gizmoController?.onPointerUp();
+                freeCam.onPointerUp(e);
+              },
               onPointerMove: (event) {
+                if (gizmoController?.isDragging == true) {
+                  gizmoController?.onPointerMove(event);
+                  return;
+                }
+
                 freeCam.onPointerMove(event);
                 selectionController?.onPointerMove(event, _viewportKey.currentContext!);
               },
@@ -135,6 +165,10 @@ class _Viewport3DState extends State<Viewport3D> {
 
   void _onThreeJsReady() {
     // Now that threeJs.scene is initialized, create scene-dependent managers
+    // Marca a cena pronta para que o build() possa manipular câmera/renderer
+    setState(() {
+      _ready = true;
+    });
     sceneManager = SceneManager(
       scene: threeJs.scene,
       modelManager: modelManager,
@@ -144,6 +178,14 @@ class _Viewport3DState extends State<Viewport3D> {
       threeJs: threeJs,
       sceneManager: sceneManager,
     );
+
+    // Initialize Gizmo controller and load from bundled assets
+    gizmoController = GizmoController(threeJs);
+    gizmoController!.loadGizmoFromAssets();
+
+    threeJs.addAnimationEvent((dt) {
+      gizmoController?.update();
+    });
 
     // Ouvir mudanças no projeto
     _projectListener = updateSceneFromProject;
