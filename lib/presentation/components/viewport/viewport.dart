@@ -221,6 +221,10 @@ class _Viewport3DState extends State<Viewport3D> {
         
         if (model != null) {
           object3d = model.clone();
+
+          // Ensure this clone has its own userData map so it doesn't share
+          // the same reference with the original model or other clones.
+          object3d.userData = <String, dynamic>{};
         }
       }
     }
