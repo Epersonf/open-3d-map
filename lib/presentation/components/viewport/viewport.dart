@@ -102,18 +102,22 @@ class _Viewport3DState extends State<Viewport3D> {
               // Segurança: não tente selecionar antes da cena estar pronta
               if (!_ready) return;
 
-              final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
-              final hitGizmo = renderBox != null
-                  ? (gizmoController?.onTapDown(details, _viewportKey.currentContext!, renderBox.size) ?? false)
-                  : false;
-
-              if (hitGizmo) return;
+              // If we're currently dragging the gizmo, ignore tap selection
+              if (gizmoController?.isDragging == true) return;
 
               selectionController?.onTapDown(details, _viewportKey.currentContext!);
             },
             child: Listener(
               onPointerDown: (e) {
-                if (gizmoController?.isDragging == true) return;
+                // 1) Try the gizmo first (instantaneous raw event)
+                final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+                final hitGizmo = renderBox != null
+                    ? (gizmoController?.onPointerDown(e, _viewportKey.currentContext!, renderBox.size) ?? false)
+                    : false;
+
+                if (hitGizmo) return;
+
+                // 2) Otherwise, handle camera interaction
                 freeCam.onPointerDown(e);
               },
               onPointerUp: (e) {

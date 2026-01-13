@@ -93,7 +93,7 @@ class GizmoController {
         // Garante que renderize na frente de tudo
         child.renderOrder = 999;
 
-        final n = (child.name ?? '').toLowerCase();
+        final n = (child.name).toLowerCase();
 
         String? axis;
         three.Color color = three.Color.fromHex32(0xFFFFFF);
@@ -149,10 +149,11 @@ class GizmoController {
     _gizmoModel!.scale.setValues(scale, scale, scale);
   }
 
-  bool onTapDown(TapDownDetails details, BuildContext context, Size size) {
+  bool onPointerDown(PointerDownEvent event, BuildContext context, Size size) {
     if (_gizmoModel == null || !_gizmoModel!.visible) return false;
 
-    _updateMouseCoordinates(details.localPosition, size);
+    // Use localPosition to compute NDC consistently
+    _updateMouseCoordinates(event.localPosition, size);
 
     _raycaster.setFromCamera(_mouse, threeJs.camera);
 
@@ -169,8 +170,9 @@ class GizmoController {
 
       if (axis != null) {
         _activeAxis = axis;
-        _lastMouseX = details.localPosition.dx;
-        _lastMouseY = details.localPosition.dy;
+        // Initialize last mouse to avoid jump when starting drag
+        _lastMouseX = event.localPosition.dx;
+        _lastMouseY = event.localPosition.dy;
         return true;
       }
     }
