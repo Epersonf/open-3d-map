@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_3d_mapper/presentation/components/file_explorer/file_explorer.dart';
 import 'presentation/components/layout/top_bar.dart';
+import 'presentation/components/layout/editor_toolbar.dart';
 import 'presentation/components/inspector/inspector_panel.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'stores/selection_store.dart';
@@ -38,6 +39,7 @@ class HomePage extends StatelessWidget {
       body: Column(
         children: [
           const TopBar(),
+          const EditorToolbar(),
           Expanded(
             child: Column(
               children: [

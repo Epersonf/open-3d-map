@@ -4,113 +4,94 @@ import 'package:flutter/material.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../stores/selection_store.dart';
 import '../../../../stores/project_store.dart';
+import '../../../../stores/tool_store.dart';
 import '../../../../core/utils/model_import.dart';
 import '../../../../domain/scene/game_object.dart';
 import '../../../../domain/scene/transform.dart' as domain;
 
 class GizmoController {
   final three.ThreeJS threeJs;
-  three.Object3D? _gizmoModel;
   
+  // Modelos individuais para cada modo
+  three.Object3D? _moveGizmo;
+  three.Object3D? _rotateGizmo;
+  three.Object3D? _scaleGizmo;
+  
+  three.Object3D? get _activeGizmo {
+    switch (ToolStore.instance.activeMode) {
+      case GizmoMode.translate:
+        return _moveGizmo;
+      case GizmoMode.rotate:
+        return _rotateGizmo;
+      case GizmoMode.scale:
+        return _scaleGizmo;
+    }
+  }
+
   // Controle de estado
-  String? _activeAxis; // 'X', 'Y', 'Z' ou null
+  String? _activeAxis; 
   bool get isDragging => _activeAxis != null;
   
-  // Raycasting exclusivo para o Gizmo
   final three.Raycaster _raycaster = three.Raycaster();
   final three.Vector2 _mouse = three.Vector2(0, 0);
   
-  // Para cálculo de movimento
   double _lastMouseX = 0;
   double _lastMouseY = 0;
 
-  GizmoController(this.threeJs) {
-    // nada a fazer por enquanto
+  GizmoController(this.threeJs);
+
+  /// Carrega todos os 3 gizmos
+  Future<void> loadAllGizmos() async {
+    _moveGizmo = await _loadSingleGizmo('assets/3d/MoveArrows.fbx');
+    _rotateGizmo = await _loadSingleGizmo('assets/3d/RotateArrows.fbx');
+    _scaleGizmo = await _loadSingleGizmo('assets/3d/ScaleArrows.fbx');
+    
+    if (_moveGizmo != null) threeJs.scene.add(_moveGizmo!);
+    if (_rotateGizmo != null) threeJs.scene.add(_rotateGizmo!);
+    if (_scaleGizmo != null) threeJs.scene.add(_scaleGizmo!);
   }
 
-  Future<void> loadGizmo(String path) async {
-    final model = await ModelImport.loadModel(path);
-    if (model != null) {
-      // clone para evitar compartilhamento com possíveis caches
-      _gizmoModel = model.clone();
-      _gizmoModel!.visible = false;
-
-      _gizmoModel!.traverse((child) {
-        if (child is three.Mesh) {
-          child.renderOrder = 999;
-          if (child.material != null) {
-            child.material!.depthTest = false;
-            child.material!.transparent = true;
-          }
-
-          final n = (child.name).toLowerCase();
-          if (n.contains('x')) child.userData['axis'] = 'X';
-          if (n.contains('y')) child.userData['axis'] = 'Y';
-          if (n.contains('z')) child.userData['axis'] = 'Z';
-        }
-      });
-
-      threeJs.scene.add(_gizmoModel!);
-    }
-  }
-
-  /// Load the gizmo model from the Flutter asset bundle by copying it to
-  /// a temporary file and letting the existing ModelImport read it.
-  Future<void> loadGizmoFromAssets() async {
+  Future<three.Object3D?> _loadSingleGizmo(String assetPath) async {
     try {
-      const assetPath = 'assets/3d/MoveArrows.fbx';
       final temp = await _assetToTempFile(assetPath);
       final model = await ModelImport.loadModel(temp.path);
       if (model != null) {
-        _gizmoModel = model.clone();
-        _setupGizmoVisuals();
-        threeJs.scene.add(_gizmoModel!);
-      } else {
-        print('Gizmo model loaded from assets is null');
+        final clone = model.clone();
+        _setupGizmoVisuals(clone);
+        clone.visible = false;
+        return clone;
       }
     } catch (e) {
-      print('Error loading gizmo from assets: $e');
+      print('Erro ao carregar gizmo $assetPath: $e');
     }
+    return null;
   }
 
   Future<File> _assetToTempFile(String assetPath) async {
     final data = await rootBundle.load(assetPath);
     final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     final tmpDir = Directory.systemTemp;
-    final file = File('${tmpDir.path}/${assetPath.split('/').last}');
+    final file = File('${tmpDir.path}/${assetPath.split('/').last.replaceAll('.fbx', '')}_${DateTime.now().millisecondsSinceEpoch}.fbx');
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
 
-  void _setupGizmoVisuals() {
-    if (_gizmoModel == null) return;
-
-    // Esconde por padrão até ter seleção
-    _gizmoModel!.visible = false;
-
-    _gizmoModel!.traverse((child) {
+  void _setupGizmoVisuals(three.Object3D model) {
+    model.traverse((child) {
       if (child is three.Mesh) {
-        // Garante que renderize na frente de tudo
         child.renderOrder = 999;
-
-        final n = (child.name).toLowerCase();
-
+        
+        final n = (child.name ?? '').toLowerCase();
         String? axis;
         three.Color color = three.Color.fromHex32(0xFFFFFF);
 
-        // Correção de mapeamento dos eixos baseada no export FBX
-        // Arrow1 = Y (Verde)
-        if (n.contains('arrow1') || n.contains('y')) {
+        if (n.contains('arrow1') || n.contains('y') || n.contains('green')) {
           axis = 'Y';
           color = three.Color.fromHex32(0x00FF00);
-        }
-        // Arrow2 = X (Vermelho) -- invertido em relação à versão anterior
-        else if (n.contains('arrow2') || n.contains('x')) {
+        } else if (n.contains('arrow2') || n.contains('x') || n.contains('red')) {
           axis = 'X';
           color = three.Color.fromHex32(0xFF0000);
-        }
-        // Arrow3 = Z (Azul) -- invertido em relação à versão anterior
-        else if (n.contains('arrow3') || n.contains('z')) {
+        } else if (n.contains('arrow3') || n.contains('z') || n.contains('blue')) {
           axis = 'Z';
           color = three.Color.fromHex32(0x0000FF);
         }
@@ -129,89 +110,133 @@ class GizmoController {
 
   void update() {
     final selected = SelectionStore.instance.selected;
-    if (selected == null || _gizmoModel == null) {
-      _gizmoModel?.visible = false;
-      return;
-    }
+    
+    _moveGizmo?.visible = false;
+    _rotateGizmo?.visible = false;
+    _scaleGizmo?.visible = false;
 
-    _gizmoModel!.visible = true;
+    if (selected == null || _activeGizmo == null) return;
 
-    _gizmoModel!.position.setValues(
+    final gizmo = _activeGizmo!;
+    gizmo.visible = true;
+
+    gizmo.position.setValues(
       selected.transform.position.x,
       selected.transform.position.y,
       selected.transform.position.z,
     );
+    
+    gizmo.rotation.set(0, 0, 0);
 
-    final distance = threeJs.camera.position.distanceTo(_gizmoModel!.position);
-    // Ajuste: reduzir o fator para que o gizmo fique menor na tela
-    // Valores sugeridos: 0.04 (padrão), 0.03, 0.02 — ajustar conforme necessário
+    final distance = threeJs.camera.position.distanceTo(gizmo.position);
     final scale = distance * 0.001;
-    _gizmoModel!.scale.setValues(scale, scale, scale);
+    gizmo.scale.setValues(scale, scale, scale);
   }
 
   bool onPointerDown(PointerDownEvent event, BuildContext context, Size size) {
-    if (_gizmoModel == null || !_gizmoModel!.visible) return false;
+    final gizmo = _activeGizmo;
+    if (gizmo == null || !gizmo.visible) return false;
 
-    // Use localPosition to compute NDC consistently
     _updateMouseCoordinates(event.localPosition, size);
-
     _raycaster.setFromCamera(_mouse, threeJs.camera);
 
-    final intersects = _raycaster.intersectObject(_gizmoModel!, true);
+    final intersects = _raycaster.intersectObject(gizmo, true);
 
     if (intersects.isNotEmpty) {
       final object = intersects.first.object;
       String? axis;
       if (object?.userData['axis'] != null) {
         axis = object?.userData['axis'] as String?;
-      } else if ((object?.name ?? '').contains('X')) axis = 'X';
+      } 
+      else if ((object?.name ?? '').contains('X')) axis = 'X';
       else if ((object?.name ?? '').contains('Y')) axis = 'Y';
       else if ((object?.name ?? '').contains('Z')) axis = 'Z';
 
       if (axis != null) {
         _activeAxis = axis;
-        // Initialize last mouse to avoid jump when starting drag
         _lastMouseX = event.localPosition.dx;
         _lastMouseY = event.localPosition.dy;
         return true;
       }
     }
-
     return false;
   }
 
   void onPointerMove(PointerMoveEvent event) {
-    if (_activeAxis == null || SelectionStore.instance.selected == null) return;
+     if (_activeAxis == null || SelectionStore.instance.selected == null) return;
 
-    final dx = event.position.dx - _lastMouseX;
-    final dy = event.position.dy - _lastMouseY;
-    _lastMouseX = event.position.dx;
-    _lastMouseY = event.position.dy;
+     final dx = event.position.dx - _lastMouseX;
+     final dy = event.position.dy - _lastMouseY;
+     _lastMouseX = event.position.dx;
+     _lastMouseY = event.position.dy;
 
-    const speed = 0.05;
-    double delta = 0;
+     final mode = ToolStore.instance.activeMode;
+     double delta = 0;
 
-    if (_activeAxis == 'X') delta = dx * speed;
-    if (_activeAxis == 'Y') delta = -dy * speed;
-    if (_activeAxis == 'Z') delta = -dx * speed;
+     // --- CORREÇÃO DA LÓGICA DE MOVIMENTO ---
+     if (mode == GizmoMode.rotate) {
+       // Sensibilidade da rotação (Graus por pixel)
+       const rotateSpeed = 0.8; 
+       
+       // Eixo X (Vermelho): Mover mouse para cima/baixo (dy) rotaciona em X
+       if (_activeAxis == 'X') delta = dy * rotateSpeed;
+       
+       // Eixo Y (Verde): Mover mouse para lados (dx) rotaciona em Y
+       if (_activeAxis == 'Y') delta = dx * rotateSpeed;
+       
+       // Eixo Z (Azul): Mover mouse para lados (dx) inclina em Z
+       if (_activeAxis == 'Z') delta = -dx * rotateSpeed;
+       
+     } else {
+       // Move e Scale mantêm a lógica direcional
+       const speed = 0.05; 
+       if (_activeAxis == 'X') delta = dx * speed;
+       if (_activeAxis == 'Y') delta = -dy * speed;
+       if (_activeAxis == 'Z') delta = -dx * speed;
+     }
 
-    _applyMove(delta);
+     _applyTransform(delta);
   }
 
   void onPointerUp() {
     _activeAxis = null;
   }
 
-  void _applyMove(double delta) {
+  void _applyTransform(double delta) {
     final selected = SelectionStore.instance.selected!;
+    final mode = ToolStore.instance.activeMode;
 
-    double newX = selected.transform.position.x;
-    double newY = selected.transform.position.y;
-    double newZ = selected.transform.position.z;
+    double px = selected.transform.position.x;
+    double py = selected.transform.position.y;
+    double pz = selected.transform.position.z;
 
-    if (_activeAxis == 'X') newX += delta;
-    if (_activeAxis == 'Y') newY += delta;
-    if (_activeAxis == 'Z') newZ += delta;
+    double sx = selected.transform.scale.x;
+    double sy = selected.transform.scale.y;
+    double sz = selected.transform.scale.z;
+    
+    double rx = selected.transform.rotation.x;
+    double ry = selected.transform.rotation.y;
+    double rz = selected.transform.rotation.z;
+
+    if (mode == GizmoMode.translate) {
+      if (_activeAxis == 'X') px += delta;
+      if (_activeAxis == 'Y') py += delta;
+      if (_activeAxis == 'Z') pz += delta;
+    } 
+    else if (mode == GizmoMode.scale) {
+      if (_activeAxis == 'X') sx += delta;
+      if (_activeAxis == 'Y') sy += delta;
+      if (_activeAxis == 'Z') sz += delta;
+      if (sx < 0.01) sx = 0.01;
+      if (sy < 0.01) sy = 0.01;
+      if (sz < 0.01) sz = 0.01;
+    }
+    // --- LÓGICA DE ROTAÇÃO ADICIONADA ---
+    else if (mode == GizmoMode.rotate) {
+      if (_activeAxis == 'X') rx += delta;
+      if (_activeAxis == 'Y') ry += delta;
+      if (_activeAxis == 'Z') rz += delta;
+    }
 
     final updated = GameObject(
       id: selected.id,
@@ -219,9 +244,9 @@ class GizmoController {
       parentId: selected.parentId,
       assetId: selected.assetId,
       transform: domain.Transform(
-        position: domain.Vec3(x: newX, y: newY, z: newZ),
-        rotation: selected.transform.rotation,
-        scale: selected.transform.scale,
+        position: domain.Vec3(x: px, y: py, z: pz),
+        rotation: domain.Vec3(x: rx, y: ry, z: rz),
+        scale: domain.Vec3(x: sx, y: sy, z: sz),
       ),
       tags: selected.tags,
       children: selected.children,

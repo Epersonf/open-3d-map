@@ -5,6 +5,7 @@ import 'package:open_3d_mapper/presentation/components/viewport/free_camera_cont
 import 'package:three_js/three_js.dart' as three;
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
+import '../../../stores/tool_store.dart';
 import '../../../domain/scene/game_object.dart';
 import '../../../domain/asset/asset.dart';
 import 'controllers/selection_controller.dart';
@@ -63,6 +64,8 @@ class _Viewport3DState extends State<Viewport3D> {
       _selectionDisposer!();
       _selectionDisposer = null;
     }
+    // Remove tool listener if it was added
+    ToolStore.instance.removeListener(_onToolChanged);
     freeCam.dispose();
     threeJs.dispose();
     three.loading.clear();
@@ -183,13 +186,16 @@ class _Viewport3DState extends State<Viewport3D> {
       sceneManager: sceneManager,
     );
 
-    // Initialize Gizmo controller and load from bundled assets
+    // Initialize Gizmo controller and load all gizmo variants
     gizmoController = GizmoController(threeJs);
-    gizmoController!.loadGizmoFromAssets();
+    gizmoController!.loadAllGizmos();
 
     threeJs.addAnimationEvent((dt) {
       gizmoController?.update();
     });
+
+    // Listen for tool changes to update gizmo immediately
+    ToolStore.instance.addListener(_onToolChanged);
 
     // Ouvir mudanças no projeto
     _projectListener = updateSceneFromProject;
@@ -200,6 +206,10 @@ class _Viewport3DState extends State<Viewport3D> {
 
     // Populate scene from project now that sceneManager exists
     updateSceneFromProject();
+  }
+
+  void _onToolChanged() {
+    gizmoController?.update();
   }
 
   Future<void> updateSceneFromProject() async {
