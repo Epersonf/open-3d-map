@@ -1,0 +1,75 @@
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:three_js/three_js.dart' as three;
+import '../../../../core/utils/model_import.dart';
+
+class GizmoLoader {
+  static Future<Map<String, three.Object3D?>> loadGizmos() async {
+    final move = await _loadSingleGizmo('assets/3d/MoveArrows.fbx');
+    final rotate = await _loadSingleGizmo('assets/3d/RotateArrows.fbx');
+    final scale = await _loadSingleGizmo('assets/3d/ScaleArrows.fbx');
+
+    return {
+      'move': move,
+      'rotate': rotate,
+      'scale': scale,
+    };
+  }
+
+  static Future<three.Object3D?> _loadSingleGizmo(String assetPath) async {
+    try {
+      final temp = await _assetToTempFile(assetPath);
+      final model = await ModelImport.loadModel(temp.path);
+      if (model != null) {
+        final clone = model.clone();
+        _setupGizmoVisuals(clone);
+        clone.visible = false;
+        return clone;
+      }
+    } catch (e) {
+      print('Erro ao carregar gizmo $assetPath: $e');
+    }
+    return null;
+  }
+
+  static Future<File> _assetToTempFile(String assetPath) async {
+    final data = await rootBundle.load(assetPath);
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    final tmpDir = Directory.systemTemp;
+    final file = File('${tmpDir.path}/${assetPath.split('/').last.replaceAll('.fbx', '')}_${DateTime.now().millisecondsSinceEpoch}.fbx');
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
+  static void _setupGizmoVisuals(three.Object3D model) {
+    model.traverse((child) {
+      if (child is three.Mesh) {
+        child.renderOrder = 999;
+
+        final n = (child.name).toLowerCase();
+        String? axis;
+        three.Color color = three.Color.fromHex32(0xFFFFFF);
+
+        if (n.contains('arrow1') || n.contains('y') || n.contains('green')) {
+          axis = 'Y';
+          color = three.Color.fromHex32(0x00FF00);
+        } else if (n.contains('arrow2') || n.contains('x') || n.contains('red')) {
+          axis = 'X';
+          color = three.Color.fromHex32(0xFF0000);
+        } else if (n.contains('arrow3') || n.contains('z') || n.contains('blue')) {
+          axis = 'Z';
+          color = three.Color.fromHex32(0x0000FF);
+        }
+
+        if (axis != null) {
+          child.userData['axis'] = axis;
+          final mat = three.MeshBasicMaterial();
+          mat.color = color;
+          child.material = mat;
+          child.material!.depthTest = false;
+          child.material!.transparent = true;
+        }
+      }
+    });
+  }
+}
