@@ -22,6 +22,7 @@ dependencies:
   three_js_simple_loaders: ^0.2.2
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   json_serializable: ^6.11.3
@@ -31,3 +32,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/3d/
+    - assets/logo.png
+
+flutter_launcher_icons:
+  image_path: "assets/logo.png"
+  windows:
+    generate: true
+    icon_size: 48
+  macos:
+    generate: true
+  linux:
+    generate: true

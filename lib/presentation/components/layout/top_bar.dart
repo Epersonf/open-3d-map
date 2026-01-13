@@ -120,9 +120,10 @@ class TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text(
-            'O3M',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              Image.asset('assets/logo.png', height: 32, errorBuilder: (ctx, err, st) => const SizedBox.shrink()),
+            ],
           ),
           const SizedBox(width: 20),
           PopupMenuButton<String>(
