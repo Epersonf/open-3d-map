@@ -2,18 +2,24 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:three_js/three_js.dart' as three;
 import '../../../../core/utils/model_import.dart';
+import 'gizmo_enums.dart';
+
+/// Classe simples para segurar os assets carregados de forma tipada
+class GizmoAssets {
+  final three.Object3D? move;
+  final three.Object3D? rotate;
+  final three.Object3D? scale;
+
+  GizmoAssets({this.move, this.rotate, this.scale});
+}
 
 class GizmoLoader {
-  static Future<Map<String, three.Object3D?>> loadGizmos() async {
+  static Future<GizmoAssets> loadGizmos() async {
     final move = await _loadSingleGizmo('assets/3d/MoveArrows.fbx');
     final rotate = await _loadSingleGizmo('assets/3d/RotateArrows.fbx');
     final scale = await _loadSingleGizmo('assets/3d/ScaleArrows.fbx');
 
-    return {
-      'move': move,
-      'rotate': rotate,
-      'scale': scale,
-    };
+    return GizmoAssets(move: move, rotate: rotate, scale: scale);
   }
 
   static Future<three.Object3D?> _loadSingleGizmo(String assetPath) async {
@@ -45,24 +51,25 @@ class GizmoLoader {
     model.traverse((child) {
       if (child is three.Mesh) {
         child.renderOrder = 999;
-
-        final n = (child.name).toLowerCase();
-        String? axis;
+        
+        final n = (child.name ?? '').toLowerCase();
+        GizmoAxis? axis;
         three.Color color = three.Color.fromHex32(0xFFFFFF);
 
         if (n.contains('arrow1') || n.contains('y') || n.contains('green')) {
-          axis = 'Y';
+          axis = GizmoAxis.y;
           color = three.Color.fromHex32(0x00FF00);
         } else if (n.contains('arrow2') || n.contains('x') || n.contains('red')) {
-          axis = 'X';
+          axis = GizmoAxis.x;
           color = three.Color.fromHex32(0xFF0000);
         } else if (n.contains('arrow3') || n.contains('z') || n.contains('blue')) {
-          axis = 'Z';
+          axis = GizmoAxis.z;
           color = three.Color.fromHex32(0x0000FF);
         }
 
         if (axis != null) {
-          child.userData['axis'] = axis;
+          child.userData['gizmoAxis'] = axis;
+          
           final mat = three.MeshBasicMaterial();
           mat.color = color;
           child.material = mat;
