@@ -21,15 +21,18 @@ class RotateStrategy implements TransformStrategy {
 
   @override
   GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
+    final rad = 3.14159265359 / 180;
+
+    // Converter Euler atual (graus) para Quaternion usando a ordem XYZ padrão
     final currentEuler = three.Euler(
-      original.transform.rotation.x * (3.14159 / 180),
-      original.transform.rotation.y * (3.14159 / 180),
-      original.transform.rotation.z * (3.14159 / 180),
-      three.RotationOrders.yxz,
+      original.transform.rotation.x * rad,
+      original.transform.rotation.y * rad,
+      original.transform.rotation.z * rad,
+      three.RotationOrders.xyz,
     );
     final currentQuat = three.Quaternion().setFromEuler(currentEuler);
 
-    final deltaRad = delta * (3.14159 / 180);
+    final deltaRad = delta * rad;
     final deltaQuat = three.Quaternion();
 
     three.Vector3 axisVector;
@@ -53,7 +56,8 @@ class RotateStrategy implements TransformStrategy {
       currentQuat.premultiply(deltaQuat);
     }
 
-    final newEuler = three.Euler().setFromQuaternion(currentQuat, three.RotationOrders.yxz);
+    // Converter de volta para Euler (mantendo ordem XYZ)
+    final newEuler = three.Euler().setFromQuaternion(currentQuat, three.RotationOrders.xyz);
 
     return GameObject(
       id: original.id,
@@ -63,9 +67,9 @@ class RotateStrategy implements TransformStrategy {
       transform: domain.Transform(
         position: original.transform.position,
         rotation: domain.Vec3(
-          x: newEuler.x * (180 / 3.14159),
-          y: newEuler.y * (180 / 3.14159),
-          z: newEuler.z * (180 / 3.14159),
+          x: newEuler.x * (180 / 3.14159265359),
+          y: newEuler.y * (180 / 3.14159265359),
+          z: newEuler.z * (180 / 3.14159265359),
         ),
         scale: original.transform.scale,
       ),

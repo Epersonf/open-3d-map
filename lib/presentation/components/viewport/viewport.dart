@@ -167,7 +167,8 @@ class _Viewport3DState extends State<Viewport3D> {
       2000,
     );
 
-    threeJs.camera.rotation.order = three.RotationOrders.yxz;
+    // Use standard XYZ rotation order to match ThreeJS defaults
+    threeJs.camera.rotation.order = three.RotationOrders.xyz;
     threeJs.camera.position.setValues(0, 2, 8);
 
     threeJs.scene.add(three.AmbientLight(0xffffff, 0.6));

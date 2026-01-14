@@ -31,7 +31,7 @@ class _InspectorPanelState extends State<InspectorPanel> {
                 ),
               ),
               child: ListTile(
-                title: const Text('Transform', style: TextStyle(color: Colors.white)),
+                title: const Text('Transform (Local)', style: TextStyle(color: Colors.white)),
                 trailing: Icon(
                   _expanded[0] ? Icons.expand_less : Icons.expand_more,
                   color: Colors.white70,
