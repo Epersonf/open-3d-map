@@ -27,8 +27,6 @@ class _TransformInspectorState extends State<TransformInspector> {
   final TextEditingController sy = TextEditingController(text: '1');
   final TextEditingController sz = TextEditingController(text: '1');
 
-  String? _currentSelectedId;
-  GameObject? _currentObject;
   Timer? _applyTimer;
 
   @override
@@ -48,7 +46,7 @@ class _TransformInspectorState extends State<TransformInspector> {
 
   void _applyTransform() {
     final sel = SelectionStore.instance.selected;
-    if (sel == null || _currentObject == null) return;
+    if (sel == null) return; // Removida verificação de _currentObject para evitar stale state
 
     final newTransform = Transform(
       position: Vec3(
@@ -87,6 +85,22 @@ class _TransformInspectorState extends State<TransformInspector> {
     _applyTimer = Timer(const Duration(milliseconds: 500), _applyTransform);
   }
 
+  /// Método auxiliar seguro para atualizar o texto do controlador
+  /// Ele verifica se o valor realmente mudou para evitar loop ou reset de cursor enquanto digita
+  void _updateControllerIfNeeded(TextEditingController ctrl, double value) {
+    // 1. Pega o valor atual que está no texto
+    double? currentTextVal = double.tryParse(ctrl.text);
+    
+    // 2. Se for nulo ou a diferença for significativa, atualiza
+    // Usamos um pequeno epsilon para evitar 'flickering' de floating point
+    if (currentTextVal == null || (currentTextVal - value).abs() > 0.001) {
+      // Verificação extra: Se o widget tem foco, o usuário pode estar digitando "10."
+      // Se atualizarmos para "10.00" agora, atrapalha a digitação.
+      // Mas como o Gizmo é arrastado no Viewport, o TextField NÃO tem foco.
+      ctrl.text = value.toStringAsFixed(2);
+    }
+  }
+
   Widget _tripleField(String label, TextEditingController a, TextEditingController b, TextEditingController c) {
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -97,45 +111,34 @@ class _TransformInspectorState extends State<TransformInspector> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: TextField(
-                  controller: a,
-                  decoration: const InputDecoration(
-                    labelText: 'X',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (_) => _scheduleApply(),
-                ),
-              ),
+              Expanded(child: _buildInput(a, 'X')),
               const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: b,
-                  decoration: const InputDecoration(
-                    labelText: 'Y',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (_) => _scheduleApply(),
-                ),
-              ),
+              Expanded(child: _buildInput(b, 'Y')),
               const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: c,
-                  decoration: const InputDecoration(
-                    labelText: 'Z',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (_) => _scheduleApply(),
-                ),
-              ),
+              Expanded(child: _buildInput(c, 'Z')),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInput(TextEditingController controller, String label) {
+    return TextField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white, fontSize: 13),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white54),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: const OutlineInputBorder(),
+        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+        filled: true,
+        fillColor: const Color(0xFF1E1E1E),
+      ),
+      onChanged: (_) => _scheduleApply(),
     );
   }
 
@@ -144,8 +147,6 @@ class _TransformInspectorState extends State<TransformInspector> {
     return Observer(builder: (_) {
       final sel = SelectionStore.instance.selected;
       if (sel == null) {
-        _currentSelectedId = null;
-        _currentObject = null;
         return Container(
           padding: const EdgeInsets.all(12),
           child: const Text(
@@ -155,24 +156,18 @@ class _TransformInspectorState extends State<TransformInspector> {
         );
       }
 
-      // update controllers only when selection changes
-      if (_currentSelectedId != sel.id) {
-        _applyTimer?.cancel();
-        _currentSelectedId = sel.id;
-        _currentObject = sel;
-        
-        px.text = sel.transform.position.x.toStringAsFixed(2);
-        py.text = sel.transform.position.y.toStringAsFixed(2);
-        pz.text = sel.transform.position.z.toStringAsFixed(2);
+    
+      _updateControllerIfNeeded(px, sel.transform.position.x);
+      _updateControllerIfNeeded(py, sel.transform.position.y);
+      _updateControllerIfNeeded(pz, sel.transform.position.z);
 
-        rx.text = sel.transform.rotation.x.toStringAsFixed(2);
-        ry.text = sel.transform.rotation.y.toStringAsFixed(2);
-        rz.text = sel.transform.rotation.z.toStringAsFixed(2);
+      _updateControllerIfNeeded(rx, sel.transform.rotation.x);
+      _updateControllerIfNeeded(ry, sel.transform.rotation.y);
+      _updateControllerIfNeeded(rz, sel.transform.rotation.z);
 
-        sx.text = sel.transform.scale.x.toStringAsFixed(2);
-        sy.text = sel.transform.scale.y.toStringAsFixed(2);
-        sz.text = sel.transform.scale.z.toStringAsFixed(2);
-      }
+      _updateControllerIfNeeded(sx, sel.transform.scale.x);
+      _updateControllerIfNeeded(sy, sel.transform.scale.y);
+      _updateControllerIfNeeded(sz, sel.transform.scale.z);
 
       return Column(
         mainAxisSize: MainAxisSize.min,
