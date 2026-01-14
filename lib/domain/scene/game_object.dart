@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mobx/mobx.dart';
 import 'transform.dart';
 
 part 'game_object.g.dart';
@@ -6,12 +7,14 @@ part 'game_object.g.dart';
 @JsonSerializable(explicitToJson: true)
 class GameObject {
   final String id;
-  final String name;
-  final String? parentId;
+  String name;
+  String? parentId;
   final String? assetId;
   final Transform transform;
   final Map<String, String> tags;
-  final List<GameObject> children;
+
+  // Observable children list so MobX observers detect add/remove
+  final ObservableList<GameObject> children;
 
   GameObject({
     required this.id,
@@ -22,7 +25,17 @@ class GameObject {
     Map<String, String>? tags,
     List<GameObject>? children,
   })  : tags = tags ?? {},
-        children = children ?? [];
+        children = ObservableList.of(children ?? []);
+
+  // Helpers to maintain reactivity
+  void addChild(GameObject child) {
+    child.parentId = id;
+    children.add(child);
+  }
+
+  void removeChild(String childId) {
+    children.removeWhere((c) => c.id == childId);
+  }
 
   factory GameObject.fromJson(Map<String, dynamic> json) => _$GameObjectFromJson(json);
   Map<String, dynamic> toJson() => _$GameObjectToJson(this);

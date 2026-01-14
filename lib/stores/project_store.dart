@@ -266,6 +266,114 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cria um GameObject vazio (Empty) como filho de [parentId] ou na raiz se null.
+  void createEmpty({String? parentId}) {
+    if (_project == null) return;
+
+    final newObj = GameObject(
+      id: const Uuid().v4(),
+      name: 'Empty Object',
+      parentId: parentId,
+      assetId: null,
+      transform: Transform(position: Vec3(x: 0, y: 0, z: 0), rotation: Vec3(x: 0, y: 0, z: 0), scale: Vec3(x: 1, y: 1, z: 1)),
+    );
+
+    if (_project!.scenes.isEmpty) {
+      final scene = Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [newObj]);
+      _project!.scenes.add(scene);
+    } else {
+      if (parentId == null) {
+        _project!.scenes.first.rootObjects.add(newObj);
+      } else {
+        final parent = findGameObjectById(parentId);
+        if (parent != null) {
+          parent.children.add(newObj);
+        } else {
+          // fallback to root
+          _project!.scenes.first.rootObjects.add(newObj);
+        }
+      }
+    }
+
+    notifyListeners();
+  }
+
+  /// Move (re-parent) um GameObject identificado por [childId] para o novo pai [newParentId].
+  /// [newParentId] == null significa mover para a raiz.
+  void reparentObject(String childId, String? newParentId) {
+    if (_project == null) return;
+
+    if (childId == newParentId) return;
+
+    // Evita ciclos: não permitir mover para um descendente do próprio filho
+    if (newParentId != null) {
+      final child = findGameObjectById(childId);
+      if (child != null) {
+        bool _isDescendant(GameObject node, String idToFind) {
+          for (final c in node.children) {
+            if (c.id == idToFind) return true;
+            if (_isDescendant(c, idToFind)) return true;
+          }
+          return false;
+        }
+
+        if (_isDescendant(child, newParentId)) return; // não permita
+      }
+    }
+
+    // Remove o objeto da sua posição atual e captura a instância
+    GameObject? removed;
+
+    bool _removeInList(List<GameObject> list) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id == childId) {
+          removed = list.removeAt(i);
+          return true;
+        }
+        if (list[i].children.isNotEmpty) {
+          final did = _removeInList(list[i].children);
+          if (did) return true;
+        }
+      }
+      return false;
+    }
+
+    for (final scene in _project!.scenes) {
+      if (_removeInList(scene.rootObjects)) break;
+    }
+
+    if (removed == null) return;
+
+    // Cria uma cópia com o mesmo ID mas com novo parentId
+    final moved = GameObject(
+      id: removed!.id,
+      name: removed!.name,
+      parentId: newParentId,
+      assetId: removed!.assetId,
+      transform: Transform(
+        position: Vec3(x: removed!.transform.position.x, y: removed!.transform.position.y, z: removed!.transform.position.z),
+        rotation: Vec3(x: removed!.transform.rotation.x, y: removed!.transform.rotation.y, z: removed!.transform.rotation.z),
+        scale: Vec3(x: removed!.transform.scale.x, y: removed!.transform.scale.y, z: removed!.transform.scale.z),
+      ),
+      tags: Map.from(removed!.tags),
+      children: removed!.children,
+    );
+
+    if (newParentId == null) {
+      _project!.scenes.first.rootObjects.add(moved);
+    } else {
+      final parent = findGameObjectById(newParentId);
+      if (parent != null) {
+        parent.children.add(moved);
+      } else {
+        // fallback: add to root
+        _project!.scenes.first.rootObjects.add(moved);
+      }
+    }
+
+    notifyListeners();
+  }
+
   /// Método auxiliar recursivo para clonar objetos garantindo novos IDs
   GameObject _deepCloneGameObject(GameObject source, String? parentId, {bool isRootClone = false}) {
     final newId = const Uuid().v4();

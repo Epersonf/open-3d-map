@@ -33,6 +33,16 @@ Future<void> showHierarchyContextMenu(BuildContext context, Offset globalPositio
           ],
         ),
       ),
+      const PopupMenuItem<int>(
+        value: 5,
+        child: Row(
+          children: [
+            Icon(Icons.add, size: 16, color: Colors.white70),
+            SizedBox(width: 8),
+            Text('Create Empty Child'),
+          ],
+        ),
+      ),
       const PopupMenuDivider(height: 1),
       const PopupMenuItem<int>(value: 1, child: Text('Rename')),
       const PopupMenuItem<int>(value: 2, child: Text('Delete', style: TextStyle(color: Colors.redAccent))),
@@ -47,6 +57,10 @@ Future<void> showHierarchyContextMenu(BuildContext context, Offset globalPositio
   else if (result == 4) {
     // Duplicate
     ProjectStore.instance.duplicateGameObject(node);
+  }
+  else if (result == 5) {
+    // Create Empty Child
+    ProjectStore.instance.createEmpty(parentId: node.id);
   }
   else if (result == 1) {
     // Rename
