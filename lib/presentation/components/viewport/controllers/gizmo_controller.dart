@@ -32,7 +32,18 @@ class GizmoController {
   final three.Raycaster _raycaster = three.Raycaster();
   final three.Vector2 _mouse = three.Vector2(0, 0);
 
-  GizmoController(this.threeJs);
+  // Listener para atualizar quando o modo ou espaço mudar
+  late final VoidCallback _toolStoreListener;
+
+  GizmoController(this.threeJs) {
+    _toolStoreListener = () => update();
+    ToolStore.instance.addListener(_toolStoreListener);
+  }
+
+  // Chamar dispose no Viewport para limpar o listener
+  void dispose() {
+    ToolStore.instance.removeListener(_toolStoreListener);
+  }
 
   /// Carrega todos os 3 gizmos
   Future<void> loadAllGizmos() async {
@@ -61,7 +72,20 @@ class GizmoController {
       selected.transform.position.z,
     );
     
-    gizmo.rotation.set(0, 0, 0);
+    // --- LÓGICA DE ROTAÇÃO VISUAL DO GIZMO ---
+    final space = ToolStore.instance.transformSpace;
+    bool shouldRotateGizmo = space == TransformSpace.local || ToolStore.instance.activeMode == GizmoMode.scale;
+
+    if (shouldRotateGizmo) {
+      // Copia a rotação do objeto (converter graus -> rad)
+      gizmo.rotation.set(
+        selected.transform.rotation.x * (3.14159 / 180),
+        selected.transform.rotation.y * (3.14159 / 180),
+        selected.transform.rotation.z * (3.14159 / 180),
+      );
+    } else {
+      gizmo.rotation.set(0, 0, 0);
+    }
 
     final distance = threeJs.camera.position.distanceTo(gizmo.position);
     final scale = distance * 0.001;
@@ -112,20 +136,19 @@ class GizmoController {
      _lastMouseY = event.position.dy;
 
      final mode = ToolStore.instance.activeMode;
+     final space = ToolStore.instance.transformSpace;
      final strategy = _strategies[mode];
 
      if (strategy != null) {
-       // 1. Calcular Delta via Strategy
        final delta = strategy.calculateDelta(_activeAxis!, dx, dy);
 
-       // 2. Aplicar Transformação via Strategy
        final updatedObject = strategy.apply(
          SelectionStore.instance.selected!,
          _activeAxis!,
          delta,
+         space,
        );
 
-       // 3. Atualizar Stores
        ProjectStore.instance.updateGameObject(updatedObject);
        SelectionStore.instance.select(updatedObject);
        

@@ -30,6 +30,9 @@ class EditorToolbar extends StatelessWidget {
             tooltip: 'Scale (R)',
           ),
           const VerticalDivider(color: Colors.white24, indent: 8, endIndent: 8),
+          
+          // --- NOVO BOTÃO DE ESPAÇO ---
+          _SpaceToggleButton(),
         ],
       ),
     );
@@ -64,6 +67,35 @@ class _ToolButton extends StatelessWidget {
             visualDensity: VisualDensity.compact,
           ),
           onPressed: () => ToolStore.instance.setMode(mode),
+        );
+      },
+    );
+  }
+}
+
+// --- WIDGET DO BOTÃO LOCAL/GLOBAL ---
+class _SpaceToggleButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: ToolStore.instance,
+      builder: (context, _) {
+        final isLocal = ToolStore.instance.transformSpace == TransformSpace.local;
+        return TextButton.icon(
+          onPressed: () => ToolStore.instance.toggleTransformSpace(),
+          icon: Icon(
+            isLocal ? Icons.my_location : Icons.public,
+            size: 16,
+            color: Colors.white70,
+          ),
+          label: Text(
+            isLocal ? 'Local' : 'Global',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          style: TextButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.05),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
         );
       },
     );

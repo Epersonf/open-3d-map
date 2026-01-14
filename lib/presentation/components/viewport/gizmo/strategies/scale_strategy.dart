@@ -1,5 +1,6 @@
 import '../../../../../domain/scene/game_object.dart';
 import '../../../../../domain/scene/transform.dart' as domain;
+import '../../../../../stores/tool_store.dart';
 import '../gizmo_enums.dart';
 import 'transform_strategy.dart';
 
@@ -18,7 +19,7 @@ class ScaleStrategy implements TransformStrategy {
   }
 
   @override
-  GameObject apply(GameObject original, GizmoAxis axis, double delta) {
+  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
     double x = original.transform.scale.x;
     double y = original.transform.scale.y;
     double z = original.transform.scale.z;
