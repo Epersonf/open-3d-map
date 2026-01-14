@@ -48,6 +48,7 @@ class _Viewport3DState extends State<Viewport3D> {
       onSetupComplete: _onThreeJsReady,
     );
 
+    // Criar o controller aqui é seguro pois o construtor não acessa a câmera.
     freeCam = FreeCameraController(threeJs);
     
     // Inicializar gerenciadores que não dependem da cena
@@ -121,6 +122,9 @@ class _Viewport3DState extends State<Viewport3D> {
             },
             child: Listener(
               onPointerDown: (e) {
+                // Não processa interações de câmera antes da cena estar pronta
+                if (!_ready) return;
+
                 // 1) Try the gizmo first (instantaneous raw event)
                 final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
                 final hitGizmo = renderBox != null
@@ -133,10 +137,14 @@ class _Viewport3DState extends State<Viewport3D> {
                 freeCam.onPointerDown(e);
               },
               onPointerUp: (e) {
+                if (!_ready) return;
+
                 gizmoController?.onPointerUp();
                 freeCam.onPointerUp(e);
               },
               onPointerMove: (event) {
+                if (!_ready) return;
+
                 if (gizmoController?.isDragging == true) {
                   gizmoController?.onPointerMove(event);
                   return;
@@ -186,6 +194,10 @@ class _Viewport3DState extends State<Viewport3D> {
     setState(() {
       _ready = true;
     });
+    // Inicializa o controller que depende da câmera do ThreeJS
+    try {
+      freeCam.initialize();
+    } catch (_) {}
     sceneManager = SceneManager(
       scene: threeJs.scene,
       modelManager: modelManager,

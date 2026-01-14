@@ -14,9 +14,25 @@ class FreeCameraController {
   double lookSpeed = 2.5;
 
   FreeCameraController(this.threeJs) {
-    // CORREÇÃO: Força a ordem de rotação para YXZ (Padrão FPS).
-    // Isso evita que a rotação em Y cause roll no eixo X.
-    threeJs.camera.rotation.order = three.RotationOrders.yxz;
+    // NOTA: Não acessar `threeJs.camera` aqui — a câmera pode não
+    // estar inicializada quando o controller for criado (ex: initState).
+    // A configuração dependente da câmera deve ser feita em `initialize()`.
+  }
+
+  /// Inicializa partes que dependem da existência da câmera.
+  /// Deve ser chamada depois que a cena/câmera do ThreeJS estiver pronta.
+  void initialize() {
+    try {
+      final cam = threeJs.camera;
+      cam.rotation.order = three.RotationOrders.yxz;
+    } catch (_) {
+      // Se a câmera ainda não estiver pronta, ignoramos —
+      // o chamador deve garantir que `initialize()` seja executado
+      // assim que a cena estiver disponível.
+    }
+
+    // Registra o loop de atualização (mesmo se a câmera ainda não estiver configurada,
+    // `_update` só acessará a câmera quando necessário durante o loop).
     threeJs.addAnimationEvent(_update);
   }
 
