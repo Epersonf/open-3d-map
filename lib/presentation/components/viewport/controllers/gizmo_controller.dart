@@ -74,7 +74,9 @@ class GizmoController {
     
     // --- LÓGICA DE ROTAÇÃO VISUAL DO GIZMO ---
     final space = ToolStore.instance.transformSpace;
-    bool shouldRotateGizmo = space == TransformSpace.local || ToolStore.instance.activeMode == GizmoMode.scale;
+
+    // Antes estava forçando Scale a ser sempre local. Agora respeitamos o toggle.
+    bool shouldRotateGizmo = space == TransformSpace.local;
 
     if (shouldRotateGizmo) {
       // Copia a rotação do objeto (converter graus -> rad)

@@ -1,3 +1,4 @@
+import 'package:three_js/three_js.dart' as three;
 import '../../../../../domain/scene/game_object.dart';
 import '../../../../../domain/scene/transform.dart' as domain;
 import '../../../../../stores/tool_store.dart';
@@ -20,25 +21,63 @@ class ScaleStrategy implements TransformStrategy {
 
   @override
   GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
-    double x = original.transform.scale.x;
-    double y = original.transform.scale.y;
-    double z = original.transform.scale.z;
+    double sx = original.transform.scale.x;
+    double sy = original.transform.scale.y;
+    double sz = original.transform.scale.z;
 
-    switch (axis) {
-      case GizmoAxis.x:
-        x += delta;
-        break;
-      case GizmoAxis.y:
-        y += delta;
-        break;
-      case GizmoAxis.z:
-        z += delta;
-        break;
+    if (space == TransformSpace.local) {
+      // Comportamento simples (local)
+      switch (axis) {
+        case GizmoAxis.x:
+          sx += delta;
+          break;
+        case GizmoAxis.y:
+          sy += delta;
+          break;
+        case GizmoAxis.z:
+          sz += delta;
+          break;
+      }
+    } else {
+      // Comportamento "Global Projetado"
+      three.Vector3 globalMove;
+      switch (axis) {
+        case GizmoAxis.x:
+          globalMove = three.Vector3(1, 0, 0);
+          break;
+        case GizmoAxis.y:
+          globalMove = three.Vector3(0, 1, 0);
+          break;
+        case GizmoAxis.z:
+          globalMove = three.Vector3(0, 0, 1);
+          break;
+      }
+
+      // Intensidade do movimento global baseada em delta
+      globalMove.multiply(three.Vector3(delta, delta, delta));
+
+      // Rotação inversa do objeto (world -> local)
+      final euler = three.Euler(
+        original.transform.rotation.x * (3.14159 / 180),
+        original.transform.rotation.y * (3.14159 / 180),
+        original.transform.rotation.z * (3.14159 / 180),
+      );
+      final quaternion = three.Quaternion().setFromEuler(euler);
+      quaternion.invert();
+
+      // Trazer o movimento global para o espaço local
+      globalMove.applyQuaternion(quaternion);
+
+      // Aplicar ao scale local
+      sx += globalMove.x;
+      sy += globalMove.y;
+      sz += globalMove.z;
     }
 
-    if (x < 0.01) x = 0.01;
-    if (y < 0.01) y = 0.01;
-    if (z < 0.01) z = 0.01;
+    // Proteção contra escala zero ou negativa
+    if (sx < 0.01) sx = 0.01;
+    if (sy < 0.01) sy = 0.01;
+    if (sz < 0.01) sz = 0.01;
 
     return GameObject(
       id: original.id,
@@ -48,7 +87,7 @@ class ScaleStrategy implements TransformStrategy {
       transform: domain.Transform(
         position: original.transform.position,
         rotation: original.transform.rotation,
-        scale: domain.Vec3(x: x, y: y, z: z),
+        scale: domain.Vec3(x: sx, y: sy, z: sz),
       ),
       tags: original.tags,
       children: original.children,
