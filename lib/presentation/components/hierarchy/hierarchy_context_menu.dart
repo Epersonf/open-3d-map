@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/scene/game_object.dart';
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
+import '../../../stores/camera_store.dart'; // Importe o CameraStore
 import 'rename_modal.dart';
 
 /// Shows a context menu for a hierarchy node at the given global position.
@@ -10,12 +11,29 @@ Future<void> showHierarchyContextMenu(BuildContext context, Offset globalPositio
     context: context,
     position: RelativeRect.fromLTRB(globalPosition.dx, globalPosition.dy, globalPosition.dx, globalPosition.dy),
     items: [
+      // Opção Focus adicionada no topo
+      const PopupMenuItem<int>(
+        value: 3,
+        child: Row(
+          children: [
+            Icon(Icons.center_focus_strong, size: 16, color: Colors.white70),
+            SizedBox(width: 8),
+            Text('Focus'),
+          ],
+        ),
+      ),
+      const PopupMenuDivider(height: 1),
       const PopupMenuItem<int>(value: 1, child: Text('Rename')),
       const PopupMenuItem<int>(value: 2, child: Text('Delete', style: TextStyle(color: Colors.redAccent))),
     ],
   );
 
-  if (result == 1) {
+  if (result == 3) {
+    // Focus Action
+    SelectionStore.instance.select(node); // Garante que seleciona ao focar
+    CameraStore.instance.requestFocus(node);
+  } 
+  else if (result == 1) {
     // Rename
     final newName = await showRenameModal(context, currentName: node.name);
     if (newName != null && newName != node.name) {

@@ -6,6 +6,7 @@ import 'package:three_js/three_js.dart' as three;
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/tool_store.dart';
+import '../../../stores/camera_store.dart'; // Camera focus bridge
 import '../../../domain/scene/game_object.dart';
 import '../../../domain/asset/asset.dart';
 import 'controllers/selection_controller.dart';
@@ -32,6 +33,8 @@ class _Viewport3DState extends State<Viewport3D> {
   bool _ready = false;
   
   VoidCallback? _projectListener;
+  // Listener para requisições de foco da câmera
+  VoidCallback? _cameraListener;
   ReactionDisposer? _selectionDisposer;
   final GlobalKey _viewportKey = GlobalKey();
 
@@ -59,6 +62,11 @@ class _Viewport3DState extends State<Viewport3D> {
     if (_projectListener != null) {
       ProjectStore.instance.removeListener(_projectListener!);
       _projectListener = null;
+    }
+    // Remover listener de foco da câmera
+    if (_cameraListener != null) {
+      CameraStore.instance.removeListener(_cameraListener!);
+      _cameraListener = null;
     }
     if (_selectionDisposer != null) {
       _selectionDisposer!();
@@ -201,11 +209,39 @@ class _Viewport3DState extends State<Viewport3D> {
     _projectListener = updateSceneFromProject;
     ProjectStore.instance.addListener(_projectListener!);
 
+    // Ouvir pedidos de foco da UI
+    _cameraListener = _handleCameraFocusRequest;
+    CameraStore.instance.addListener(_cameraListener!);
+
     // Ouvir mudanças na seleção
     _setupSelectionListener();
 
     // Populate scene from project now that sceneManager exists
     updateSceneFromProject();
+  }
+
+  /// Lógica para focar a câmera no objeto solicitado pela UI
+  void _handleCameraFocusRequest() {
+    final target = CameraStore.instance.focusTarget;
+    if (target == null) return;
+
+    final t = target.transform;
+    final targetPos = three.Vector3(t.position.x, t.position.y, t.position.z);
+
+    // Distância padrão para o foco (pode ser melhorada calculando bounds)
+    const double distance = 5.0;
+    final offset = three.Vector3(0, 2, distance);
+
+    threeJs.camera.position.setValues(
+      targetPos.x + offset.x,
+      targetPos.y + offset.y,
+      targetPos.z + offset.z,
+    );
+
+    threeJs.camera.lookAt(targetPos);
+
+    // Consumir request para não ser reprocessado
+    CameraStore.instance.consumeRequest();
   }
 
   void _onToolChanged() {
