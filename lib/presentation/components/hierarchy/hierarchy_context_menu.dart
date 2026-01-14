@@ -22,6 +22,17 @@ Future<void> showHierarchyContextMenu(BuildContext context, Offset globalPositio
           ],
         ),
       ),
+      // Duplicate option
+      const PopupMenuItem<int>(
+        value: 4,
+        child: Row(
+          children: [
+            Icon(Icons.content_copy, size: 16, color: Colors.white70),
+            SizedBox(width: 8),
+            Text('Duplicate'),
+          ],
+        ),
+      ),
       const PopupMenuDivider(height: 1),
       const PopupMenuItem<int>(value: 1, child: Text('Rename')),
       const PopupMenuItem<int>(value: 2, child: Text('Delete', style: TextStyle(color: Colors.redAccent))),
@@ -33,6 +44,10 @@ Future<void> showHierarchyContextMenu(BuildContext context, Offset globalPositio
     SelectionStore.instance.select(node); // Garante que seleciona ao focar
     CameraStore.instance.requestFocus(node);
   } 
+  else if (result == 4) {
+    // Duplicate
+    ProjectStore.instance.duplicateGameObject(node);
+  }
   else if (result == 1) {
     // Rename
     final newName = await showRenameModal(context, currentName: node.name);

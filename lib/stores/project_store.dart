@@ -242,4 +242,52 @@ class ProjectStore extends ChangeNotifier {
 
     return null;
   }
+
+  /// Duplica um GameObject e toda sua hierarquia
+  void duplicateGameObject(GameObject original) {
+    if (_project == null || _project!.scenes.isEmpty) return;
+
+    // 1. Criar uma cópia profunda (Deep Clone) com novos IDs
+    // Passamos o mesmo parentId do original, pois será um irmão (sibling)
+    final clone = _deepCloneGameObject(original, original.parentId, isRootClone: true);
+
+    // 2. Inserir na hierarquia
+    if (original.parentId == null) {
+      // É um objeto raiz, adiciona na cena ativa
+      _project!.scenes.first.rootObjects.add(clone);
+    } else {
+      // É filho de alguém, encontra o pai e adiciona na lista de filhos
+      final parent = findGameObjectById(original.parentId!);
+      if (parent != null) {
+        parent.children.add(clone);
+      }
+    }
+
+    notifyListeners();
+  }
+
+  /// Método auxiliar recursivo para clonar objetos garantindo novos IDs
+  GameObject _deepCloneGameObject(GameObject source, String? parentId, {bool isRootClone = false}) {
+    final newId = const Uuid().v4();
+    
+    // Se for o objeto que o usuário clicou para duplicar, adicionamos "(Clone)" no nome.
+    // Os filhos internos mantêm o nome original.
+    final newName = isRootClone ? '${source.name} (Clone)' : source.name;
+
+    return GameObject(
+      id: newId,
+      name: newName,
+      parentId: parentId, // O novo pai (ou null se for raiz)
+      assetId: source.assetId,
+      // Copia o Transform (Value Type, então é seguro, mas bom garantir)
+      transform: Transform(
+        position: Vec3(x: source.transform.position.x, y: source.transform.position.y, z: source.transform.position.z),
+        rotation: Vec3(x: source.transform.rotation.x, y: source.transform.rotation.y, z: source.transform.rotation.z),
+        scale: Vec3(x: source.transform.scale.x, y: source.transform.scale.y, z: source.transform.scale.z),
+      ),
+      tags: Map.from(source.tags),
+      // Recursão: Clona os filhos passando O NOVO ID DESTE OBJETO como pai
+      children: source.children.map((child) => _deepCloneGameObject(child, newId)).toList(),
+    );
+  }
 }
