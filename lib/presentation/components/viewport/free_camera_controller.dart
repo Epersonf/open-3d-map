@@ -14,6 +14,9 @@ class FreeCameraController {
   double lookSpeed = 2.5;
 
   FreeCameraController(this.threeJs) {
+    // CORREÇÃO: Força a ordem de rotação para YXZ (Padrão FPS).
+    // Isso evita que a rotação em Y cause roll no eixo X.
+    threeJs.camera.rotation.order = three.RotationOrders.yxz;
     threeJs.addAnimationEvent(_update);
   }
 
@@ -35,15 +38,26 @@ class FreeCameraController {
 
     final cam = threeJs.camera;
 
+    // Garante que a ordem não foi perdida (ex: após um lookAt)
+    if (cam.rotation.order != three.RotationOrders.yxz) {
+      cam.rotation.order = three.RotationOrders.yxz;
+      cam.updateMatrix();
+    }
+
+    // Y = Yaw (Esquerda/Direita global)
     cam.rotation.y -= e.delta.dx * 0.0025 * lookSpeed;
 
+    // X = Pitch (Cima/Baixo local)
     cam.rotation.x -= e.delta.dy * 0.0025 * lookSpeed;
 
-    const double maxPitch = 1.45;
+    // Trava para não dar cambalhota (olhar para trás por cima da cabeça)
+    const double maxPitch = 1.50; // aprox 85 graus
     if (cam.rotation.x > maxPitch) cam.rotation.x = maxPitch;
     if (cam.rotation.x < -maxPitch) cam.rotation.x = -maxPitch;
 
+    // Força Z a zero e realinha o vetor UP
     cam.rotation.z = 0;
+    cam.up.setValues(0, 1, 0);
   }
 
   void onKey(KeyEvent e) {
@@ -57,7 +71,8 @@ class FreeCameraController {
   }
 
   void _update(double dt) {
-    if (!rightMouseDown) return;
+    // Permite movimento por teclado mesmo sem o botão direito pressionado
+    if (!rightMouseDown && keys.isEmpty) return;
 
     final cam = threeJs.camera;
 
@@ -67,11 +82,13 @@ class FreeCameraController {
       speed *= runMultiplier;
     }
 
-    // direção real no espaço
+    // Pega a direção que a câmera está olhando
     final forward = three.Vector3.zero();
     cam.getWorldDirection(forward);
+    forward.y = 0; // Zera a inclinação Y para andar apenas no plano horizontal
+    forward.normalize();
 
-    // remove componente vertical do right para não inclinar strafing
+    // Calcula o vetor da direita (Right)
     final right = three.Vector3(0, 1, 0).cross(forward);
     right.normalize();
 
