@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For LogicalKeyboardKey and KeyEvent
 import 'package:mobx/mobx.dart' hide Listener;
 import 'package:open_3d_mapper/presentation/components/viewport/free_camera_controller.dart';
 import 'package:three_js/three_js.dart' as three;
@@ -86,7 +87,7 @@ class _Viewport3DState extends State<Viewport3D> {
   Widget build(BuildContext context) {
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
-      onKeyEvent: freeCam.onKey,
+      onKeyEvent: _onKey,
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Atualizar o tamanho do renderizador e aspect ratio da câmera
@@ -246,6 +247,39 @@ class _Viewport3DState extends State<Viewport3D> {
 
   void _onToolChanged() {
     gizmoController?.update();
+  }
+
+  /// Método centralizado para gerenciar input de teclado
+  void _onKey(KeyEvent event) {
+    // 1. Passa o evento para a câmera (para movimento WASD+QE)
+    // A câmera internamente já verifica se o botão direito está pressionado para se mover
+    freeCam.onKey(event);
+
+    // 2. Atalhos de Editor (Apenas no KeyDown para não disparar várias vezes)
+    if (event is KeyDownEvent) {
+      // Se estivermos "voando" com a câmera (Botão direito segurado),
+      // não queremos trocar a ferramenta, pois W e E são usados para movimento.
+      if (freeCam.rightMouseDown) return;
+
+      final key = event.logicalKey;
+
+      // --- Alternar Modos (W, E, R) ---
+      if (key == LogicalKeyboardKey.keyW) {
+        ToolStore.instance.setMode(GizmoMode.translate);
+      } else if (key == LogicalKeyboardKey.keyE) {
+        ToolStore.instance.setMode(GizmoMode.scale);
+      } else if (key == LogicalKeyboardKey.keyR) {
+        ToolStore.instance.setMode(GizmoMode.rotate);
+      }
+
+      // --- Focus (F) ---
+      else if (key == LogicalKeyboardKey.keyF) {
+        final selected = SelectionStore.instance.selected;
+        if (selected != null) {
+          CameraStore.instance.requestFocus(selected);
+        }
+      }
+    }
   }
 
   Future<void> updateSceneFromProject() async {

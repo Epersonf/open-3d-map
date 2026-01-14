@@ -19,15 +19,15 @@ class EditorToolbar extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           _ToolButton(
-            icon: Icons.refresh,
-            mode: GizmoMode.rotate,
-            tooltip: 'Rotate (E)',
+            icon: Icons.aspect_ratio,
+            mode: GizmoMode.scale,
+            tooltip: 'Scale (E)',
           ),
           const SizedBox(width: 4),
           _ToolButton(
-            icon: Icons.aspect_ratio,
-            mode: GizmoMode.scale,
-            tooltip: 'Scale (R)',
+            icon: Icons.refresh,
+            mode: GizmoMode.rotate,
+            tooltip: 'Rotate (R)',
           ),
           const VerticalDivider(color: Colors.white24, indent: 8, endIndent: 8),
           
