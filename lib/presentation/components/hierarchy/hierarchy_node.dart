@@ -46,6 +46,10 @@ class _HierarchyNodeState extends State<HierarchyNode> {
       final children = widget.node.children;
       final hasChildren = children.isNotEmpty;
 
+      // FIX: Ler o SelectionStore aqui, dentro do escopo direto do Observer
+      final selectedId = SelectionStore.instance.selected?.id;
+      final isSelected = selectedId == widget.node.id;
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -65,7 +69,7 @@ class _HierarchyNodeState extends State<HierarchyNode> {
             },
             onLeave: (_) => setState(() => _isHovering = false),
             builder: (context, candidateData, rejectedData) {
-              final isSelected = SelectionStore.instance.selected?.id == widget.node.id;
+              // use `isSelected` calculated above (at Observer scope)
 
               Widget content = Container(
                 height: 28,
