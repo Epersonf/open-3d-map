@@ -76,9 +76,12 @@ class _HierarchyNodeState extends State<HierarchyNode> {
                 child: Row(
                   children: [
                     GestureDetector(
+                      // Ensure the arrow area is hittable even when empty
+                      behavior: HitTestBehavior.opaque,
                       onTap: () => setState(() => _isExpanded = !_isExpanded),
                       child: SizedBox(
                         width: 24,
+                        height: 28,
                         child: hasChildren
                             ? Icon(
                                 _isExpanded ? Icons.arrow_drop_down : Icons.arrow_right,
@@ -105,8 +108,14 @@ class _HierarchyNodeState extends State<HierarchyNode> {
               );
 
               content = GestureDetector(
-                onTap: () => SelectionStore.instance.select(widget.node),
+                // Make the whole row tappable even if background is transparent
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  SelectionStore.instance.select(widget.node);
+                },
                 onSecondaryTapUp: (details) {
+                  // Select then open context menu
+                  SelectionStore.instance.select(widget.node);
                   showHierarchyContextMenu(context, details.globalPosition, widget.node);
                 },
                 child: content,

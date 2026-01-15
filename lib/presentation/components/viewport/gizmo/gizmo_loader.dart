@@ -52,7 +52,7 @@ class GizmoLoader {
       if (child is three.Mesh) {
         child.renderOrder = 999;
         
-        final n = (child.name ?? '').toLowerCase();
+        final n = (child.name).toLowerCase();
         GizmoAxis? axis;
         three.Color color = three.Color.fromHex32(0xFFFFFF);
 

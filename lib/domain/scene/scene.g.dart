@@ -9,8 +9,8 @@ part of 'scene.dart';
 Scene _$SceneFromJson(Map<String, dynamic> json) => Scene(
       id: json['id'] as String,
       name: json['name'] as String,
-      rootObjects: (json['rootObjects'] as List<dynamic>)
-          .map((e) => GameObject.fromJson(e as Map<String, dynamic>))
+      rootObjects: (json['rootObjects'] as List<dynamic>?)
+          ?.map((e) => GameObject.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 
