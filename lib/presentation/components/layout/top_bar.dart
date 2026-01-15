@@ -23,25 +23,43 @@ class TopBar extends StatelessWidget {
         return;
       }
       if (value == 'open') {
-        final selected = await FilePicker.platform.getDirectoryPath();
-        if (selected == null) {
+        // Now pick a FILE (supports .o3m and .json for backward compatibility)
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['o3m', 'json'],
+          dialogTitle: 'Open O3M Project',
+        );
+
+        if (result == null || result.files.isEmpty) {
           messenger.showSnackBar(const SnackBar(content: Text('Open cancelled')));
           return;
         }
 
-        final indexFile = File(p.join(selected, 'index.json'));
-        if (!await indexFile.exists()) {
-          messenger.showSnackBar(SnackBar(content: Text('index.json not found in: $selected')));
+        final filePath = result.files.single.path!;
+        final file = File(filePath);
+        final fileName = p.basename(filePath);
+
+        final projectRoot = p.dirname(filePath);
+
+        if (!await file.exists()) {
+          messenger.showSnackBar(SnackBar(content: Text('File not found: $filePath')));
           return;
         }
 
-        final content = await indexFile.readAsString();
-        final json = jsonDecode(content) as Map<String, dynamic>;
-        final project = Project.fromJson(json);
-        messenger.showSnackBar(SnackBar(content: Text('Project opened: ${project.name}')));
-        ProjectStore.instance.setProject(project, selected);
-        // ignore: avoid_print
-        print('Opened project at $selected:\n${project.toJson()}');
+        final content = await file.readAsString();
+        try {
+          final json = jsonDecode(content) as Map<String, dynamic>;
+          final project = Project.fromJson(json);
+          messenger.showSnackBar(SnackBar(content: Text('Project opened: ${project.name}')));
+
+          // Pass both the inferred directory and the filename to the store
+          ProjectStore.instance.setProject(project, projectRoot, fileName: fileName);
+
+          // ignore: avoid_print
+          print('Opened project at $projectRoot (file: $fileName)');
+        } catch (e) {
+          messenger.showSnackBar(SnackBar(content: Text('Invalid project file: $e')));
+        }
         return;
       }
 
@@ -52,13 +70,14 @@ class TopBar extends StatelessWidget {
           return;
         }
 
-        final parent = await FilePicker.platform.getDirectoryPath();
-        if (parent == null) {
+        // Choose parent folder for the project
+        final parentPath = await FilePicker.platform.getDirectoryPath(dialogTitle: 'Select Parent Folder for New Project');
+        if (parentPath == null) {
           messenger.showSnackBar(const SnackBar(content: Text('No folder selected')));
           return;
         }
 
-        final projectDir = Directory(p.join(parent, name));
+        final projectDir = Directory(p.join(parentPath, name));
         if (!await projectDir.exists()) {
           await projectDir.create(recursive: true);
         }
@@ -67,9 +86,14 @@ class TopBar extends StatelessWidget {
         if (!await assetsDir.exists()) await assetsDir.create(recursive: true);
 
         final project = Project.createNew(name);
-        final indexFile = File(p.join(projectDir.path, 'index.json'));
-        await indexFile.writeAsString(const JsonEncoder.withIndent('  ').convert(project.toJson()));
-        ProjectStore.instance.setProject(project, projectDir.path);
+
+        // Use .o3m as default project filename
+        const defaultFileName = 'project.o3m';
+        final projectFile = File(p.join(projectDir.path, defaultFileName));
+        await projectFile.writeAsString(const JsonEncoder.withIndent('  ').convert(project.toJson()));
+
+        ProjectStore.instance.setProject(project, projectDir.path, fileName: defaultFileName);
+
         messenger.showSnackBar(SnackBar(content: Text('Project created at ${projectDir.path}')));
         // ignore: avoid_print
         print('Created project at ${projectDir.path}');

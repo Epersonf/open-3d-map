@@ -17,6 +17,8 @@ class ProjectStore extends ChangeNotifier {
   String? _projectPath;
   String? _assetsRoot;
   String? _currentPath;
+  // Nome do arquivo do projeto (ex: 'project.o3m' ou personalizado)
+  String _projectFileName = 'project.o3m';
   List<FileSystemEntity> _entries = [];
 
   String? get projectPath => _projectPath;
@@ -34,71 +36,13 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setProject(Project project, String path) {
+  // Modificado para receber opcionalmente o nome do arquivo do projeto
+  void setProject(Project project, String path, {String fileName = 'project.o3m'}) {
     _project = project;
-    
-    // --- CORREÇÃO CRÍTICA: Saneamento de IDs ---
-    _fixDuplicateIds(); 
-    // -------------------------------------------
-
+    _projectFileName = fileName;
+  
     setProjectPath(path);
     notifyListeners();
-  }
-
-  /// Remove IDs duplicados e corrige referências parentId quebradas
-  void _fixDuplicateIds() {
-    if (_project == null) return;
-    
-    final Set<String> registeredIds = {};
-    bool changesMade = false;
-
-    // Função recursiva para regenerar a árvore com IDs únicos
-    GameObject sanitizeNode(GameObject node, String? correctParentId) {
-      String myId = node.id;
-      
-      // Se ID já existe ou é vazio, gera um novo UUID
-      if (registeredIds.contains(myId) || myId.isEmpty) {
-        myId = const Uuid().v4();
-        changesMade = true;
-        print('Fixed duplicate ID for "${node.name}": ${node.id} -> $myId');
-      }
-      registeredIds.add(myId);
-
-      // Recria os filhos passando o MEU ID (corrigido) como pai deles
-      final newChildren = <GameObject>[];
-      for (final child in node.children) {
-        newChildren.add(sanitizeNode(child, myId));
-      }
-
-      // Retorna o objeto (seja ele novo ou o mesmo) com os dados corrigidos
-      return GameObject(
-        id: myId,
-        name: node.name,
-        parentId: correctParentId,
-        assetId: node.assetId,
-        transform: node.transform,
-        tags: node.tags,
-        children: newChildren, 
-      );
-    }
-
-    // Aplica em todas as cenas
-    for (final scene in _project!.scenes) {
-      final newRoots = <GameObject>[];
-      // Itera sobre uma cópia da lista
-      for (final root in List<GameObject>.from(scene.rootObjects)) {
-        newRoots.add(sanitizeNode(root, null));
-      }
-      
-      scene.rootObjects.clear();
-      scene.rootObjects.addAll(newRoots);
-    }
-
-    if (changesMade) {
-      print('Project IDs sanitized successfully.');
-      // Opcional: Salva o projeto corrigido imediatamente
-      saveProject(); 
-    }
   }
 
   Future<void> refreshCurrent() async {
@@ -188,11 +132,12 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Modificado para salvar usando o nome do arquivo do projeto e extensão .o3m
   Future<void> saveProject() async {
     if (_project == null || _projectPath == null) return;
-    final indexFile = File(p.join(_projectPath!, 'index.json'));
+    final file = File(p.join(_projectPath!, _projectFileName));
     final encoded = const JsonEncoder.withIndent('  ').convert(_project!.toJson());
-    await indexFile.writeAsString(encoded);
+    await file.writeAsString(encoded);
   }
 
   bool updateGameObject(GameObject updated) {
