@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../stores/tool_store.dart';
+import 'grid_settings_modal.dart';
 
 class EditorToolbar extends StatelessWidget {
   const EditorToolbar({super.key});
@@ -30,11 +31,42 @@ class EditorToolbar extends StatelessWidget {
             tooltip: 'Rotate (R)',
           ),
           const VerticalDivider(color: Colors.white24, indent: 8, endIndent: 8),
-          
+
           // --- NOVO BOTÃO DE ESPAÇO ---
           _SpaceToggleButton(),
+          const SizedBox(width: 8),
+          // --- Magnet / Grid Button ---
+          _MagnetButton(),
         ],
       ),
+    );
+  }
+}
+
+class _MagnetButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: ToolStore.instance,
+      builder: (context, _) {
+        final enabled = ToolStore.instance.snapEnabled;
+        return IconButton(
+          icon: Icon(Icons.grid_4x4, size: 20, color: enabled ? Colors.blueAccent : Colors.white54),
+          tooltip: 'Snap Settings',
+          style: IconButton.styleFrom(
+            backgroundColor: enabled ? Colors.blue.withOpacity(0.2) : null,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+          ),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => const GridSettingsModal(),
+            );
+          },
+        );
+      },
     );
   }
 }

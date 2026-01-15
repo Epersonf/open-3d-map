@@ -55,7 +55,33 @@ class TranslateStrategy implements TransformStrategy {
       moveVector.y * delta,
       moveVector.z * delta,
     );
+
+    // 1. Calculate the new raw position
     position.add(moveVector);
+
+    // 2. Apply Grid Snapping if enabled
+    final store = ToolStore.instance;
+    if (store.snapEnabled) {
+      final step = store.snapIncrement;
+      final useGlobalGrid = store.snapToGrid;
+
+      double _snap(double value, double increment) {
+        if (increment <= 0) return value;
+        return (value / increment).roundToDouble() * increment;
+      }
+
+      if (useGlobalGrid) {
+        // Snap to Global Grid (0, step, 2*step...)
+        position.x = _snap(position.x, step);
+        position.y = _snap(position.y, step);
+        position.z = _snap(position.z, step);
+      } else {
+        // Fallback: snap final position as approximation for relative snapping
+        position.x = _snap(position.x, step);
+        position.y = _snap(position.y, step);
+        position.z = _snap(position.z, step);
+      }
+    }
 
     return GameObject(
       id: original.id,
