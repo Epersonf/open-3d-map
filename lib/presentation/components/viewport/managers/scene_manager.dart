@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart'; // Necessário para Icons.*
 import 'package:three_js/three_js.dart' as three;
+import '../../../../core/utils/icon_texture_generator.dart'; // Importe o novo utilitário
 import '../../../../domain/scene/game_object.dart';
 import '../../../../domain/scene/visual_component.dart';
 import '../objects/scene_object.dart';
@@ -88,17 +90,42 @@ class SceneManager {
   }
 
   Future<three.Object3D> _createIconSprite(String iconName) async {
-    int color = 0xFFFFFF;
-    if (iconName == 'light') color = 0xFFFF00;
-    if (iconName == 'enemy') color = 0xFF0000;
-    if (iconName == 'spawn') color = 0x00FF00;
-    if (iconName == 'camera') color = 0x00FFFF;
+    // 1. Mapeamento de String -> IconData
+    IconData iconData = Icons.help_outline; // Default
+    switch (iconName) {
+      case 'light':
+        iconData = Icons.lightbulb;
+        break;
+      case 'camera':
+        iconData = Icons.videocam;
+        break;
+      case 'spawn':
+        iconData = Icons.flag;
+        break;
+      case 'enemy':
+        iconData = Icons.bug_report;
+        break;
+    }
+
+    // 2. Gerar textura em memória
+    final texture = await IconTextureGenerator.createTextureFromIcon(
+      iconData,
+      size: 128, // Qualidade da textura
+      color: Colors.white, // Desenhar em branco para permitir tintura posterior
+    );
 
     final material = three.SpriteMaterial();
-    material.color = three.Color.fromHex32(color);
+    material.map = texture;
+    // A cor base branca permite que a textura apareça original. 
+    // Se mudarmos essa cor, ela tinge o ícone (útil para seleção).
+    material.color = three.Color.fromHex32(0xFFFFFF);
+    material.transparent = true;
+    material.alphaTest = 0.5; // Melhora o recorte do ícone
 
     final sprite = three.Sprite(material);
-    sprite.scale.setValues(1, 1, 1);
+    // Escala fixa para o ícone no mundo 3D
+    sprite.scale.setValues(1.5, 1.5, 1.5);
+    
     return sprite;
   }
 
