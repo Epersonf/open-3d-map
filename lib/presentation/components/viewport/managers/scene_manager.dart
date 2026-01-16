@@ -17,12 +17,12 @@ class SceneManager {
   });
 
   SceneObject? getSceneObject(String id) => _sceneObjects[id];
-  
+
   Map<String, SceneObject> get sceneObjects => Map.unmodifiable(_sceneObjects);
 
   void addSceneObject(SceneObject sceneObject, {three.Object3D? parent}) {
     _sceneObjects[sceneObject.id] = sceneObject;
-    
+
     if (sceneObject.object3d != null) {
       if (parent != null) {
         parent.add(sceneObject.object3d!);
@@ -40,17 +40,17 @@ class SceneManager {
       final newVisual = gameObject.visual;
 
       bool visualChanged = oldVisual.type != newVisual.type ||
-                           oldVisual.assetId != newVisual.assetId ||
-                           oldVisual.iconName != newVisual.iconName;
+          oldVisual.assetId != newVisual.assetId ||
+          oldVisual.iconName != newVisual.iconName;
 
       if (visualChanged) {
-         // Remover visual antigo
-         sceneObject.disposeVisual();
-         
-         // Carregar novo visual
-         final newObj3d = await _createVisualRepresentation(gameObject);
-         sceneObject.replaceObject3d(newObj3d, scene);
-         sceneObject.cachedVisual = newVisual;
+        // Remover visual antigo
+        sceneObject.disposeVisual();
+
+        // Carregar novo visual
+        final newObj3d = await _createVisualRepresentation(gameObject);
+        sceneObject.replaceObject3d(newObj3d, scene);
+        sceneObject.cachedVisual = newVisual;
       }
 
       sceneObject.gameObject = gameObject;
@@ -60,7 +60,8 @@ class SceneManager {
   }
 
   // Lógica extraída de Viewport._createSceneObject e movida para cá
-  Future<three.Object3D?> _createVisualRepresentation(GameObject gameObject) async {
+  Future<three.Object3D?> _createVisualRepresentation(
+      GameObject gameObject) async {
     final visual = gameObject.visual;
 
     if (visual.type == VisualType.none) {
@@ -77,13 +78,13 @@ class SceneManager {
     }
 
     if (visual.type == VisualType.mesh && visual.assetId != null) {
-       // Lógica existente de carregar Mesh via ModelManager
-       final model = await modelManager.loadModel(visual.assetId!, '', '');
-       if (model != null) return model.clone();
+      // Lógica existente de carregar Mesh via ModelManager
+      final model = await modelManager.loadModel(visual.assetId!, '', '');
+      if (model != null) return model.clone();
     }
 
     if (visual.type == VisualType.icon && visual.iconName != null) {
-       return await _createIconSprite(visual.iconName!);
+      return await _createIconSprite(visual.iconName!);
     }
 
     return three.Group(); // Fallback
@@ -116,17 +117,21 @@ class SceneManager {
 
     final material = three.SpriteMaterial();
     material.map = texture;
-    // A cor base branca permite que a textura apareça original. 
+    // A cor base branca permite que a textura apareça original.
     // Se mudarmos essa cor, ela tinge o ícone (útil para seleção).
     material.color = three.Color.fromHex32(0xFFFFFF);
     material.transparent = true;
     material.alphaTest = 0.5; // Melhora o recorte do ícone
 
     final sprite = three.Sprite(material);
-    // Escala fixa para o ícone no mundo 3D
-    sprite.scale.setValues(1.5, 1.5, 1.5);
-    
-    return sprite;
+
+    sprite.scale.setValues(0.25, 0.25, 0.25);
+
+    final group = three.Group();
+
+    group.add(sprite);
+
+    return group;
   }
 
   void _updateParentRelationship(SceneObject sceneObject, String? parentId) {
