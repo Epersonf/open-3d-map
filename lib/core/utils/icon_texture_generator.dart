@@ -7,7 +7,6 @@ class IconTextureGenerator {
     IconData icon, {
     int size = 128,
     Color color = Colors.white,
-    double iconScale = 1,
   }) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
@@ -18,7 +17,7 @@ class IconTextureGenerator {
     canvas.scale(1, -1);
 
     // 2. Calcula o tamanho real da fonte baseado na escala desejada
-    final double finalIconSize = sizeDouble * iconScale;
+    final double finalIconSize = sizeDouble;
 
     final TextPainter textPainter = TextPainter(
       textDirection: TextDirection.ltr,
