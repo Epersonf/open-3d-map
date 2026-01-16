@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import '../domain/project/project.dart';
 import '../domain/scene/game_object.dart';
+import '../domain/scene/visual_component.dart';
 import '../domain/scene/transform.dart';
 import '../domain/scene/scene.dart';
 import '../stores/selection_store.dart';
@@ -113,6 +114,7 @@ class ProjectStore extends ChangeNotifier {
       name: base,
       parentId: null,
       assetId: assetId,
+      visual: VisualComponent(type: VisualType.mesh, assetId: assetId, visibleInRuntime: true),
       transform: Transform(position: Vec3(x: 0, y: 0, z: 0), rotation: Vec3(x: 0, y: 0, z: 0), scale: Vec3(x: 1, y: 1, z: 1)),
     );
 
@@ -248,6 +250,7 @@ class ProjectStore extends ChangeNotifier {
       name: 'Empty Object',
       parentId: parentId,
       assetId: null,
+      // visual padrão já é Type.none
       transform: Transform(position: Vec3(x: 0, y: 0, z: 0), rotation: Vec3(x: 0, y: 0, z: 0), scale: Vec3(x: 1, y: 1, z: 1)),
     );
 
@@ -312,6 +315,7 @@ class ProjectStore extends ChangeNotifier {
       name: removed!.name,
       parentId: newParentId,
       assetId: removed!.assetId,
+      visual: removed!.visual,
       transform: Transform(
         position: Vec3(x: removed!.transform.position.x, y: removed!.transform.position.y, z: removed!.transform.position.z),
         rotation: Vec3(x: removed!.transform.rotation.x, y: removed!.transform.rotation.y, z: removed!.transform.rotation.z),
@@ -343,6 +347,7 @@ class ProjectStore extends ChangeNotifier {
       name: newName,
       parentId: parentId,
       assetId: source.assetId,
+      visual: source.visual.copyWith(),
       transform: Transform(
         position: Vec3(x: source.transform.position.x, y: source.transform.position.y, z: source.transform.position.z),
         rotation: Vec3(x: source.transform.rotation.x, y: source.transform.rotation.y, z: source.transform.rotation.z),

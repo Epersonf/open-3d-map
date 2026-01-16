@@ -1,5 +1,6 @@
 import 'package:three_js/three_js.dart' as three;
 import '../../../../domain/scene/game_object.dart';
+import '../../../../domain/scene/visual_component.dart';
 import '../objects/scene_object.dart';
 import 'model_manager.dart';
 
@@ -29,13 +30,76 @@ class SceneManager {
     }
   }
 
-  void updateSceneObject(GameObject gameObject) {
+  /// Verifica se o visual mudou e recria o objeto 3D se necessário
+  Future<void> updateSceneObject(GameObject gameObject) async {
     final sceneObject = _sceneObjects[gameObject.id];
     if (sceneObject != null) {
+      final oldVisual = sceneObject.cachedVisual;
+      final newVisual = gameObject.visual;
+
+      bool visualChanged = oldVisual.type != newVisual.type ||
+                           oldVisual.assetId != newVisual.assetId ||
+                           oldVisual.iconName != newVisual.iconName;
+
+      if (visualChanged) {
+         // Remover visual antigo
+         sceneObject.disposeVisual();
+         
+         // Carregar novo visual
+         final newObj3d = await _createVisualRepresentation(gameObject);
+         sceneObject.replaceObject3d(newObj3d, scene);
+         sceneObject.cachedVisual = newVisual;
+      }
+
       sceneObject.gameObject = gameObject;
       sceneObject.updateTransform();
       _updateParentRelationship(sceneObject, gameObject.parentId);
     }
+  }
+
+  // Lógica extraída de Viewport._createSceneObject e movida para cá
+  Future<three.Object3D?> _createVisualRepresentation(GameObject gameObject) async {
+    final visual = gameObject.visual;
+
+    if (visual.type == VisualType.none) {
+      final group = three.Group();
+      final material = three.MeshBasicMaterial();
+      material.color = three.Color.fromHex32(0x444444);
+      material.wireframe = true;
+      final helper = three.Mesh(
+        three.BoxGeometry(0.5, 0.5, 0.5),
+        material,
+      );
+      group.add(helper);
+      return group;
+    }
+
+    if (visual.type == VisualType.mesh && visual.assetId != null) {
+       // Lógica existente de carregar Mesh via ModelManager
+       final model = await modelManager.loadModel(visual.assetId!, '', '');
+       if (model != null) return model.clone();
+    }
+
+    if (visual.type == VisualType.icon && visual.iconName != null) {
+       return await _createIconSprite(visual.iconName!);
+    }
+
+    return three.Group(); // Fallback
+  }
+
+  Future<three.Object3D> _createIconSprite(String iconName) async {
+    int color = 0xFFFFFF;
+    if (iconName == 'light') color = 0xFFFF00;
+    if (iconName == 'enemy') color = 0xFF0000;
+    if (iconName == 'spawn') color = 0x00FF00;
+    if (iconName == 'camera') color = 0x00FFFF;
+
+    final material = three.SpriteMaterial();
+    material.color = three.Color.fromHex32(color);
+
+    final sprite = three.Sprite(material);
+    sprite.scale.setValues(1, 1, 1);
+    return sprite;
   }
 
   void _updateParentRelationship(SceneObject sceneObject, String? parentId) {
@@ -60,12 +124,12 @@ class SceneManager {
 
   void removeSceneObject(String id) {
     final sceneObject = _sceneObjects.remove(id);
-    sceneObject?.dispose();
+    sceneObject?.disposeVisual();
   }
 
   void clear() {
     for (final sceneObject in _sceneObjects.values) {
-      sceneObject.dispose();
+      sceneObject.disposeVisual();
     }
     _sceneObjects.clear();
   }

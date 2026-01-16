@@ -379,7 +379,6 @@ class _Viewport3DState extends State<Viewport3D> {
       id: gameObject.id,
       gameObject: gameObject,
       object3d: object3d,
-      assetId: gameObject.assetId,
     );
     
     sceneObject.updateTransform();
