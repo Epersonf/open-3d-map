@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../../core/utils/icon_texture_generator.dart';
 import '../../../../../domain/scene/game_object.dart';
+import '../../../../../domain/scene/visual_component.dart';
 import '../scene_component_renderer.dart';
 
 class IconRenderer implements SceneComponentRenderer {
   @override
   Future<three.Object3D> render(GameObject gameObject) async {
-    final iconName = gameObject.visual.iconName;
+    final visual = gameObject.getComponent<VisualComponent>() ?? gameObject.visual;
+    final iconName = visual.iconName;
     if (iconName == null) return three.Group();
 
     // 1. Mapeamento de String -> IconData

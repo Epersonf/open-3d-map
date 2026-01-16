@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'game_component.dart';
 
 part 'visual_component.g.dart';
 
@@ -9,7 +10,13 @@ enum VisualType {
 }
 
 @JsonSerializable()
-class VisualComponent {
+class VisualComponent implements GameComponent {
+  // Identificador estático para registro
+  static const String typeId = 'visual';
+
+  @override
+  String get id => typeId;
+
   final VisualType type;
   final String? assetId;
   final String? iconName;
@@ -38,4 +45,6 @@ class VisualComponent {
       visibleInRuntime: visibleInRuntime ?? this.visibleInRuntime,
     );
   }
+  
+  
 }

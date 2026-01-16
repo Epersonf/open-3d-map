@@ -1,0 +1,30 @@
+import 'package:json_annotation/json_annotation.dart';
+
+// O contrato para qualquer componente
+abstract class GameComponent {
+  String get id; // identificador do tipo do componente (ex: 'visual', 'tags')
+
+  Map<String, dynamic> toJson();
+
+  // Método auxiliar para criar cópias (imutabilidade)
+  GameComponent copyWith();
+}
+
+// Registry para criar componentes a partir do JSON sem switch-case
+typedef ComponentFactory = GameComponent Function(Map<String, dynamic> json);
+
+class ComponentRegistry {
+  static final Map<String, ComponentFactory> _factories = {};
+
+  static void register(String id, ComponentFactory factory) {
+    _factories[id] = factory;
+  }
+
+  static GameComponent create(String id, Map<String, dynamic> json) {
+    final factory = _factories[id];
+    if (factory == null) {
+      throw Exception("Component type '$id' not registered.");
+    }
+    return factory(json);
+  }
+}
