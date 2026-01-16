@@ -1,7 +1,6 @@
 import 'package:mobx/mobx.dart';
 import 'game_component.dart';
 import '../../components/inherited/transform/transform_component.dart';
-import '../../components/inherited/visual/visual_component.dart';
 import '../../components/inherited/tags/tags_component.dart';
 
 class GameObject {

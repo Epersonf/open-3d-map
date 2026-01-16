@@ -8,7 +8,7 @@ abstract class GameComponent {
 
   // Método auxiliar para criar cópias (imutabilidade)
   GameComponent copyWith();
-  
+
   // --- Ciclo de vida ---
   /// Chamado quando o componente é inicializado ou adicionado à cena
   void onStart(dynamic owner) {}
@@ -30,7 +30,8 @@ typedef ComponentFactory = GameComponent Function(Map<String, dynamic> json);
 class ComponentRegistry {
   static final Map<String, ComponentFactory> _factories = {};
 
-  static void register(String id, ComponentFactory factory) {
+  static void register<T extends GameComponent>(
+      String id, ComponentFactory factory) {
     _factories[id] = factory;
   }
 

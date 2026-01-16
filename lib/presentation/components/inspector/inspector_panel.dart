@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:open_3d_mapper/stores/selection_store.dart';
-import '../../../components/core/component_registry.dart' as comp_ui;
 
 class InspectorPanel extends StatefulWidget {
   const InspectorPanel({super.key});
@@ -30,15 +29,20 @@ class _InspectorPanelState extends State<InspectorPanel> {
                   return Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         color: const Color(0xFF1A1A1A),
                         width: double.infinity,
                         child: Text(
                           component.id.toUpperCase(),
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      Container(color: const Color(0xFF121212), child: comp_ui.ComponentRegistry.createInspector(component)),
+                      Container(
+                        color: const Color(0xFF121212),
+                        child: component.inspectorWidget(),
+                      ),
                     ],
                   );
                 }).toList(),

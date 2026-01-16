@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_3d_mapper/components/component_register.dart';
 import 'package:open_3d_mapper/presentation/components/file_explorer/file_explorer.dart';
 import 'presentation/components/layout/top_bar.dart';
 import 'presentation/components/layout/editor_toolbar.dart';
@@ -7,35 +8,10 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'stores/selection_store.dart';
 import 'presentation/components/hierarchy/hierarchy_panel.dart';
 import 'stores/project_store.dart';
-import 'components/core/component_registry.dart';
-import 'components/inherited/visual/visual_inspector.dart';
-import 'components/inherited/tags/tags_inspector.dart';
-import 'components/inherited/visual/visual_component.dart';
-import 'components/inherited/tags/tags_component.dart';
-import 'components/inherited/transform/transform_component.dart';
-import 'components/inherited/transform/transform_inspector.dart';
 import 'presentation/components/viewport/viewport.dart';
 
 void main() {
-  // Register component data factories and inspectors
-  ComponentRegistry.register<VisualComponent>(
-    typeId: VisualComponent.typeId,
-    factory: (json) => VisualComponent.fromJson(json),
-    inspectorBuilder: (c) => const VisualInspector(),
-  );
-
-  ComponentRegistry.register<TagsComponent>(
-    typeId: TagsComponent.typeId,
-    factory: (json) => TagsComponent.fromJson(json),
-    inspectorBuilder: (c) => const TagsInspector(),
-  );
-
-  ComponentRegistry.register<TransformComponent>(
-    typeId: TransformComponent.typeId,
-    factory: (json) => TransformComponent.fromJson(json),
-    inspectorBuilder: (c) => const TransformInspector(),
-  );
-
+  ComponentRegister.registerAll();
   runApp(const MyApp());
 }
 

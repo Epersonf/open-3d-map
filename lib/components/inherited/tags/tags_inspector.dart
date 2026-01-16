@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:open_3d_mapper/components/inherited/tags/tags_component.dart';
-import 'package:open_3d_mapper/presentation/components/inspector/tag_modal.dart';
+import 'package:open_3d_mapper/components/inherited/tags/tag_modal.dart';
 import '../../../domain/tag/tag.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/project_store.dart';
