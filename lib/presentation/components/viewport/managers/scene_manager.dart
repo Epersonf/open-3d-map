@@ -1,28 +1,36 @@
-import 'package:flutter/material.dart'; // Necessário para Icons.*
+import 'package:open_3d_mapper/domain/scene/visual_component.dart';
 import 'package:three_js/three_js.dart' as three;
-import '../../../../core/utils/icon_texture_generator.dart'; // Importe o novo utilitário
 import '../../../../domain/scene/game_object.dart';
-import '../../../../domain/scene/visual_component.dart';
+import '../../../../domain/asset/asset.dart';
+import '../../../../stores/project_store.dart';
 import '../objects/scene_object.dart';
 import 'model_manager.dart';
+
+// Imports da nova arquitetura de renderização
+import '../rendering/renderer_factory.dart';
 
 class SceneManager {
   final three.Scene scene;
   final ModelManager modelManager;
   final Map<String, SceneObject> _sceneObjects = {};
 
+  late final RendererFactory _rendererFactory;
+
   SceneManager({
     required this.scene,
     required this.modelManager,
-  });
+  }) {
+    _rendererFactory = RendererFactory(
+      modelManager: modelManager,
+      projectPath: ProjectStore.instance.projectPath ?? '',
+    );
+  }
 
   SceneObject? getSceneObject(String id) => _sceneObjects[id];
-
   Map<String, SceneObject> get sceneObjects => Map.unmodifiable(_sceneObjects);
 
   void addSceneObject(SceneObject sceneObject, {three.Object3D? parent}) {
     _sceneObjects[sceneObject.id] = sceneObject;
-
     if (sceneObject.object3d != null) {
       if (parent != null) {
         parent.add(sceneObject.object3d!);
@@ -32,7 +40,6 @@ class SceneManager {
     }
   }
 
-  /// Verifica se o visual mudou e recria o objeto 3D se necessário
   Future<void> updateSceneObject(GameObject gameObject) async {
     final sceneObject = _sceneObjects[gameObject.id];
     if (sceneObject != null) {
@@ -44,10 +51,7 @@ class SceneManager {
           oldVisual.iconName != newVisual.iconName;
 
       if (visualChanged) {
-        // Remover visual antigo
         sceneObject.disposeVisual();
-
-        // Carregar novo visual
         final newObj3d = await _createVisualRepresentation(gameObject);
         sceneObject.replaceObject3d(newObj3d, scene);
         sceneObject.cachedVisual = newVisual;
@@ -59,79 +63,28 @@ class SceneManager {
     }
   }
 
-  // Lógica extraída de Viewport._createSceneObject e movida para cá
-  Future<three.Object3D?> _createVisualRepresentation(
-      GameObject gameObject) async {
-    final visual = gameObject.visual;
-
-    if (visual.type == VisualType.none) {
-      final group = three.Group();
-      final material = three.MeshBasicMaterial();
-      material.color = three.Color.fromHex32(0x444444);
-      material.wireframe = true;
-      final helper = three.Mesh(
-        three.BoxGeometry(0.5, 0.5, 0.5),
-        material,
+  Future<three.Object3D?> _createVisualRepresentation(GameObject gameObject) async {
+    // Mesh handling: resolve Asset path via ProjectStore then use ModelManager
+    if (gameObject.visual.type == VisualType.mesh && gameObject.visual.assetId != null) {
+      final project = ProjectStore.instance.project;
+      final asset = project?.assets.firstWhere(
+        (a) => a.id == gameObject.visual.assetId,
+        orElse: () => Asset(id: '', path: '', type: ''),
       );
-      group.add(helper);
-      return group;
+
+      if (asset != null && asset.path.isNotEmpty) {
+        final model = await modelManager.loadModel(
+          asset.id,
+          ProjectStore.instance.projectPath ?? '',
+          asset.path,
+        );
+        if (model != null) return model.clone();
+      }
     }
 
-    if (visual.type == VisualType.mesh && visual.assetId != null) {
-      // Lógica existente de carregar Mesh via ModelManager
-      final model = await modelManager.loadModel(visual.assetId!, '', '');
-      if (model != null) return model.clone();
-    }
-
-    if (visual.type == VisualType.icon && visual.iconName != null) {
-      return await _createIconSprite(visual.iconName!);
-    }
-
-    return three.Group(); // Fallback
-  }
-
-  Future<three.Object3D> _createIconSprite(String iconName) async {
-    // 1. Mapeamento de String -> IconData
-    IconData iconData = Icons.help_outline; // Default
-    switch (iconName) {
-      case 'light':
-        iconData = Icons.lightbulb;
-        break;
-      case 'camera':
-        iconData = Icons.videocam;
-        break;
-      case 'spawn':
-        iconData = Icons.flag;
-        break;
-      case 'enemy':
-        iconData = Icons.bug_report;
-        break;
-    }
-
-    // 2. Gerar textura em memória (com padding interno via iconScale)
-    final texture = await IconTextureGenerator.createTextureFromIcon(
-      iconData,
-      size: 128, // Qualidade da textura
-      color: Colors.white, // Desenhar em branco para permitir tintura posterior
-    );
-
-    final material = three.SpriteMaterial();
-    material.map = texture;
-    // A cor base branca permite que a textura apareça original.
-    // Se mudarmos essa cor, ela tinge o ícone (útil para seleção).
-    material.color = three.Color.fromHex32(0xFFFFFF);
-    material.transparent = true;
-    material.alphaTest = 0.5; // Melhora o recorte do ícone
-
-    final sprite = three.Sprite(material);
-
-    sprite.scale.setValues(0.25, 0.25, 0.25);
-
-    final group = three.Group();
-
-    group.add(sprite);
-
-    return group;
+    // Delegate to renderer factory for icons/empty/fallback
+    final renderer = _rendererFactory.getRenderer(gameObject.visual.type);
+    return await renderer.render(gameObject);
   }
 
   void _updateParentRelationship(SceneObject sceneObject, String? parentId) {
@@ -167,12 +120,10 @@ class SceneManager {
   }
 
   void highlightObject(String? gameObjectId) {
-    // Remover destaque de todos os objetos
     for (final sceneObject in _sceneObjects.values) {
       _removeHighlight(sceneObject);
     }
 
-    // Destacar objeto selecionado
     if (gameObjectId != null) {
       final sceneObject = _sceneObjects[gameObjectId];
       if (sceneObject != null) {
@@ -193,6 +144,9 @@ class SceneManager {
           material.emissiveIntensity = 0.0;
         }
       }
+      if (object is three.Sprite) {
+        object.material?.color = three.Color.fromHex32(0xFFFFFF);
+      }
     });
   }
 
@@ -207,6 +161,9 @@ class SceneManager {
           material.emissive = three.Color.fromHex32(0x444400);
           material.emissiveIntensity = 0.5;
         }
+      }
+      if (object is three.Sprite) {
+        object.material?.color = three.Color.fromHex32(0xFFAA00);
       }
     });
   }
