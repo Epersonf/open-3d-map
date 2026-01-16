@@ -10,9 +10,6 @@ class InspectorPanel extends StatefulWidget {
 }
 
 class _InspectorPanelState extends State<InspectorPanel> {
-  // [Graphics, Transform, Tags]
-  final List<bool> _expanded = [true, true, false];
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -49,27 +46,6 @@ class _InspectorPanelState extends State<InspectorPanel> {
             }),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, int index) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _expanded[index] ? const Color(0xFF1A1A1A) : const Color(0xFF0F0F0F),
-        border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.3))),
-      ),
-      child: ListTile(
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        trailing: Icon(
-          _expanded[index] ? Icons.expand_less : Icons.expand_more,
-          color: Colors.white70,
-        ),
-        onTap: () {
-          setState(() {
-            _expanded[index] = !_expanded[index];
-          });
-        },
       ),
     );
   }

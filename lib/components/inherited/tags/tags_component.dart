@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:open_3d_mapper/components/inherited/tags/tags_inspector.dart';
+
 import '../../../domain/scene/game_component.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -30,4 +33,9 @@ class TagsComponent implements GameComponent {
   
   @override
   void onUpdate(owner, double dt) {}
+
+  @override
+  Widget inspectorWidget() {
+    return TagsInspector();
+  }
 }

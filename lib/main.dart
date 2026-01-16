@@ -8,12 +8,12 @@ import 'stores/selection_store.dart';
 import 'presentation/components/hierarchy/hierarchy_panel.dart';
 import 'stores/project_store.dart';
 import 'components/core/component_registry.dart';
-import 'presentation/components/inspector/graphics_inspector.dart';
-import 'presentation/components/inspector/tags_inspector.dart';
+import 'components/inherited/visual/visual_inspector.dart';
+import 'components/inherited/tags/tags_inspector.dart';
 import 'components/inherited/visual/visual_component.dart';
 import 'components/inherited/tags/tags_component.dart';
 import 'components/inherited/transform/transform_component.dart';
-import 'presentation/components/inspector/transform_inspector.dart';
+import 'components/inherited/transform/transform_inspector.dart';
 import 'presentation/components/viewport/viewport.dart';
 
 void main() {
@@ -21,7 +21,7 @@ void main() {
   ComponentRegistry.register<VisualComponent>(
     typeId: VisualComponent.typeId,
     factory: (json) => VisualComponent.fromJson(json),
-    inspectorBuilder: (c) => const GraphicsInspector(),
+    inspectorBuilder: (c) => const VisualInspector(),
   );
 
   ComponentRegistry.register<TagsComponent>(

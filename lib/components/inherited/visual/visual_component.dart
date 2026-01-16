@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:open_3d_mapper/components/inherited/visual/visual_inspector.dart';
 import '../../../domain/scene/game_component.dart';
 
 part 'visual_component.g.dart';
@@ -11,7 +13,6 @@ enum VisualType {
 
 @JsonSerializable()
 class VisualComponent implements GameComponent {
-  // Identificador estático para registro
   static const String typeId = 'visual';
 
   @override
@@ -55,5 +56,8 @@ class VisualComponent implements GameComponent {
   @override
   void onUpdate(owner, double dt) {}
   
-  
+  @override
+  Widget inspectorWidget() {
+    return const VisualInspector();
+  }
 }

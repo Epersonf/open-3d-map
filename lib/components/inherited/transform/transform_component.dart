@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:open_3d_mapper/components/inherited/transform/transform_inspector.dart';
 import 'package:open_3d_mapper/domain/general/vec3.dart';
 import '../../../domain/scene/game_component.dart';
 
@@ -56,5 +58,10 @@ class TransformComponent extends GameComponent {
   @override
   void onUpdate(dynamic owner, double dt) {
     // Default: no-op
+  }
+
+  @override
+  Widget inspectorWidget() {
+    return TransformInspector();
   }
 }

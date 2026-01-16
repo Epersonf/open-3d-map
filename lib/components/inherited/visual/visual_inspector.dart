@@ -4,8 +4,8 @@ import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
 
-class GraphicsInspector extends StatelessWidget {
-  const GraphicsInspector({super.key});
+class VisualInspector extends StatelessWidget {
+  const VisualInspector({super.key});
 
   void _updateVisual(VisualComponent newVisual) {
     final sel = SelectionStore.instance.selected;

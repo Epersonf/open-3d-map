@@ -1,4 +1,4 @@
-import 'package:json_annotation/json_annotation.dart';
+import 'package:flutter/material.dart';
 
 // O contrato para qualquer componente
 abstract class GameComponent {
@@ -18,6 +18,10 @@ abstract class GameComponent {
 
   /// Chamado quando o componente/owner é destruído
   void onDestroy(dynamic owner) {}
+
+  Widget inspectorWidget() {
+    return Text('No inspector for $id');
+  }
 }
 
 // Registry para criar componentes a partir do JSON sem switch-case

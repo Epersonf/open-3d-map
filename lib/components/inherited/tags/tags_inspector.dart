@@ -5,7 +5,6 @@ import 'package:open_3d_mapper/presentation/components/inspector/tag_modal.dart'
 import '../../../domain/tag/tag.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/project_store.dart';
-import '../../../domain/scene/game_object.dart';
 
 class TagsInspector extends StatefulWidget {
   const TagsInspector({super.key});
