@@ -5,9 +5,9 @@ import 'package:three_js/three_js.dart' as three;
 class IconTextureGenerator {
   static Future<three.Texture> createTextureFromIcon(
     IconData icon, {
-    int size = 32,
+    int size = 128,
     Color color = Colors.white,
-    double iconScale = .25,
+    double iconScale = 1,
   }) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);

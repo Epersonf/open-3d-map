@@ -107,7 +107,7 @@ class SceneManager {
         break;
     }
 
-    // 2. Gerar textura em memória
+    // 2. Gerar textura em memória (com padding interno via iconScale)
     final texture = await IconTextureGenerator.createTextureFromIcon(
       iconData,
       size: 128, // Qualidade da textura

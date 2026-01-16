@@ -62,7 +62,8 @@ class SelectionController {
       final object3d = sceneObject.object3d;
       if (object3d != null) {
         object3d.traverse((object) {
-          if (object is three.Mesh) {
+          // Aceitar tanto Mesh quanto Sprite para detecção de clique
+          if (object is three.Mesh || object is three.Sprite) {
             intersectedObjects.add(object);
           }
         });
