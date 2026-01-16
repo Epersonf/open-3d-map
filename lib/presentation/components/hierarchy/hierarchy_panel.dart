@@ -25,9 +25,11 @@ class HierarchyPanel extends StatelessWidget {
                 ProjectStore.instance.reparentObject(childId, null);
               },
               builder: (context, candidate, rejected) {
-                // Observer reconstrói se a lista de objetos (ObservableList) mudar
-                return Observer(
-                  builder: (_) {
+                // FIX: Usamos AnimatedBuilder para escutar o ProjectStore (ChangeNotifier).
+                // Isso garante que quando o projeto for carregado (setProject), este widget reconstrua.
+                return AnimatedBuilder(
+                  animation: ProjectStore.instance,
+                  builder: (context, _) {
                     final project = ProjectStore.instance.project;
                     
                     if (project == null || project.scenes.isEmpty) {
@@ -36,26 +38,29 @@ class HierarchyPanel extends StatelessWidget {
 
                     final scene = project.scenes.first;
                     
-                    // Acessar .objects (que é ObservableList) garante a reatividade
-                    // Filtramos apenas quem não tem pai (Root)
-                    final roots = scene.objects.where((obj) => obj.parentId == null).toList();
+                    // Mantemos o Observer interno para escutar mudanças granulares na lista (ObservableList)
+                    // caso algo mude a lista sem disparar o notifyListeners do store.
+                    return Observer(
+                      builder: (_) {
+                        // Acessar .objects (que é ObservableList) garante a reatividade fina
+                        final roots = scene.objects.where((obj) => obj.parentId == null).toList();
 
-                    if (roots.isEmpty) {
-                       return const Center(child: Text("Scene Empty", style: TextStyle(color: Colors.white24)));
-                    }
+                        if (roots.isEmpty) {
+                           return const Center(child: Text("Scene Empty", style: TextStyle(color: Colors.white24)));
+                        }
 
-                    return ListView.builder(
-                      itemCount: roots.length,
-                      itemBuilder: (context, index) {
-                        final node = roots[index];
-                        return HierarchyNode(
-                          // Key baseada no ID é vital. 
-                          // Com o ProjectStore saneado, os IDs serão únicos e isso funcionará.
-                          key: ValueKey(node.id), 
-                          node: node,
-                          onReparent: ProjectStore.instance.reparentObject,
-                          onCreateEmpty: (pid) => ProjectStore.instance.createEmpty(parentId: pid),
-                          level: 0,
+                        return ListView.builder(
+                          itemCount: roots.length,
+                          itemBuilder: (context, index) {
+                            final node = roots[index];
+                            return HierarchyNode(
+                              key: ValueKey(node.id), 
+                              node: node,
+                              onReparent: ProjectStore.instance.reparentObject,
+                              onCreateEmpty: (pid) => ProjectStore.instance.createEmpty(parentId: pid),
+                              level: 0,
+                            );
+                          },
                         );
                       },
                     );
