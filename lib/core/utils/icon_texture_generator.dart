@@ -3,20 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:three_js/three_js.dart' as three;
 
 class IconTextureGenerator {
-  /// Gera uma Texture do ThreeJS a partir de um IconData do Flutter
-  /// desenhando-o em um Canvas offscreen.
   static Future<three.Texture> createTextureFromIcon(
     IconData icon, {
-    int size = 128, // Resolução da textura (quadrada)
+    int size = 32,
     Color color = Colors.white,
+    double iconScale = .25,
   }) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     final double sizeDouble = size.toDouble();
+
+    // 1. Inverte o Canvas (Flip Y) para corrigir a orientação no ThreeJS
     canvas.translate(0, sizeDouble);
     canvas.scale(1, -1);
 
-    // 1. Configurar o "Pincel" de texto para desenhar o ícone (que é uma fonte)
+    // 2. Calcula o tamanho real da fonte baseado na escala desejada
+    final double finalIconSize = sizeDouble * iconScale;
+
     final TextPainter textPainter = TextPainter(
       textDirection: TextDirection.ltr,
     );
@@ -24,24 +27,23 @@ class IconTextureGenerator {
     textPainter.text = TextSpan(
       text: String.fromCharCode(icon.codePoint),
       style: TextStyle(
-        fontSize: sizeDouble,
+        fontSize: finalIconSize, // Usamos o tamanho com escala
         fontFamily: icon.fontFamily,
         color: color,
-        package: icon.fontPackage, // Importante para ícones de pacotes externos
+        package: icon.fontPackage,
       ),
     );
 
     textPainter.layout();
 
-    // 2. Centralizar o ícone no canvas
+    // 3. Centralizar (A lógica se mantém, mas agora com margens maiores)
     final double xCenter = (sizeDouble - textPainter.width) / 2;
     final double yCenter = (sizeDouble - textPainter.height) / 2;
     final Offset offset = Offset(xCenter, yCenter);
 
-    // 3. Desenhar
     textPainter.paint(canvas, offset);
 
-    // 4. Converter para Imagem e depois para Bytes RGBA
+    // 4. Gerar a imagem
     final ui.Image image = await pictureRecorder.endRecording().toImage(size, size);
     final varByteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
 
@@ -51,7 +53,6 @@ class IconTextureGenerator {
 
     final bytes = varByteData.buffer.asUint8List();
 
-    // 5. Criar a DataTexture do ThreeJS
     final data = three.Uint8Array.fromList(bytes);
     final texture = three.DataTexture(
       data,
@@ -60,9 +61,9 @@ class IconTextureGenerator {
       three.RGBAFormat,
       three.UnsignedByteType,
     );
-    
-    // Configurações para garantir nitidez e orientação correta
+
     texture.needsUpdate = true;
+    texture.flipY = false; // Já invertemos manualmente no canvas
 
     return texture;
   }
