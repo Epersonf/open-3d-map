@@ -1,4 +1,4 @@
-import 'package:open_3d_mapper/domain/scene/visual_component.dart';
+import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../domain/scene/game_object.dart';
 import '../../../../domain/asset/asset.dart';
@@ -44,7 +44,8 @@ class SceneManager {
     final sceneObject = _sceneObjects[gameObject.id];
     if (sceneObject != null) {
       final oldVisual = sceneObject.cachedVisual;
-      final newVisual = gameObject.visual;
+      final newVisual = gameObject.getComponent<VisualComponent>();
+      if (newVisual == null) return;
 
       bool visualChanged = oldVisual.type != newVisual.type ||
           oldVisual.assetId != newVisual.assetId ||
@@ -64,11 +65,15 @@ class SceneManager {
   }
 
   Future<three.Object3D?> _createVisualRepresentation(GameObject gameObject) async {
+    var visualComp = gameObject.getComponent<VisualComponent>();
+    if (visualComp == null) {
+      return null;
+    }
     // Mesh handling: resolve Asset path via ProjectStore then use ModelManager
-    if (gameObject.visual.type == VisualType.mesh && gameObject.visual.assetId != null) {
+    if (visualComp.type == VisualType.mesh && visualComp.assetId != null) {
       final project = ProjectStore.instance.project;
       final asset = project?.assets.firstWhere(
-        (a) => a.id == gameObject.visual.assetId,
+        (a) => a.id == visualComp.assetId,
         orElse: () => Asset(id: '', path: '', type: ''),
       );
 
@@ -83,7 +88,7 @@ class SceneManager {
     }
 
     // Delegate to renderer factory for icons/empty/fallback
-    final renderer = _rendererFactory.getRenderer(gameObject.visual.type);
+    final renderer = _rendererFactory.getRenderer(visualComp.type);
     return await renderer.render(gameObject);
   }
 

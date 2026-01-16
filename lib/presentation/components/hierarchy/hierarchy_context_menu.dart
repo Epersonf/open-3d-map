@@ -65,23 +65,21 @@ Future<void> showHierarchyContextMenu(BuildContext context, Offset globalPositio
   else if (result == 1) {
     // Rename
     final newName = await showRenameModal(context, currentName: node.name);
-    if (newName != null && newName != node.name) {
-      final updated = GameObject(
-        id: node.id,
-        name: newName,
-        parentId: node.parentId,
-        visual: node.visual,
-        transform: node.transform,
-        tags: node.tags,
-        children: node.children,
-      );
-      ProjectStore.instance.updateGameObject(updated);
-      // If the renamed object is currently selected, update the selection to reflect the new name
-      final sel = SelectionStore.instance.selected;
-      if (sel != null && sel.id == node.id) {
-        SelectionStore.instance.select(updated);
+      if (newName != null && newName != node.name) {
+        final updated = GameObject(
+          id: node.id,
+          name: newName,
+          parentId: node.parentId,
+          components: node.components, // Added components field
+          children: node.children,
+        );
+        ProjectStore.instance.updateGameObject(updated);
+        // If the renamed object is currently selected, update the selection to reflect the new name
+        final sel = SelectionStore.instance.selected;
+        if (sel != null && sel.id == node.id) {
+          SelectionStore.instance.select(updated);
+        }
       }
-    }
   } else if (result == 2) {
     // Delete
     // if deleted, clear selection when appropriate

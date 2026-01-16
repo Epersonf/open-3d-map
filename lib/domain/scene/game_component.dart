@@ -8,6 +8,16 @@ abstract class GameComponent {
 
   // Método auxiliar para criar cópias (imutabilidade)
   GameComponent copyWith();
+  
+  // --- Ciclo de vida ---
+  /// Chamado quando o componente é inicializado ou adicionado à cena
+  void onStart(dynamic owner) {}
+
+  /// Chamado a cada frame do loop (delta time em segundos)
+  void onUpdate(dynamic owner, double dt) {}
+
+  /// Chamado quando o componente/owner é destruído
+  void onDestroy(dynamic owner) {}
 }
 
 // Registry para criar componentes a partir do JSON sem switch-case

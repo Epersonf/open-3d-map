@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'game_component.dart';
+import '../../../domain/scene/game_component.dart';
 
 part 'visual_component.g.dart';
 
@@ -45,6 +45,15 @@ class VisualComponent implements GameComponent {
       visibleInRuntime: visibleInRuntime ?? this.visibleInRuntime,
     );
   }
+  
+  @override
+  void onDestroy(owner) {}
+  
+  @override
+  void onStart(owner) {}
+  
+  @override
+  void onUpdate(owner, double dt) {}
   
   
 }

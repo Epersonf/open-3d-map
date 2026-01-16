@@ -1,6 +1,7 @@
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
+import 'package:open_3d_mapper/domain/general/vec3.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../../domain/scene/game_object.dart';
-import '../../../../../domain/scene/transform.dart' as domain;
 import '../../../../../stores/tool_store.dart';
 import '../gizmo_enums.dart';
 import 'transform_strategy.dart';
@@ -21,10 +22,15 @@ class TranslateStrategy implements TransformStrategy {
 
   @override
   GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
+    var transform = original.getComponent<TransformComponent>();
+    if (transform == null) {
+      return original;
+    }
+
     final position = three.Vector3(
-      original.transform.position.x,
-      original.transform.position.y,
-      original.transform.position.z,
+      transform.position.x,
+      transform.position.y,
+      transform.position.z,
     );
 
     three.Vector3 moveVector;
@@ -42,9 +48,9 @@ class TranslateStrategy implements TransformStrategy {
 
     if (space == TransformSpace.local) {
       final euler = three.Euler(
-        original.transform.rotation.x * (3.14159265359 / 180),
-        original.transform.rotation.y * (3.14159265359 / 180),
-        original.transform.rotation.z * (3.14159265359 / 180),
+        transform.rotation.x * (3.14159265359 / 180),
+        transform.rotation.y * (3.14159265359 / 180),
+        transform.rotation.z * (3.14159265359 / 180),
       );
       final quaternion = three.Quaternion().setFromEuler(euler);
       moveVector.applyQuaternion(quaternion);
@@ -83,18 +89,10 @@ class TranslateStrategy implements TransformStrategy {
       }
     }
 
-    return GameObject(
-      id: original.id,
-      name: original.name,
-      parentId: original.parentId,
-      visual: original.visual,
-      transform: domain.Transform(
-        position: domain.Vec3(x: position.x, y: position.y, z: position.z),
-        rotation: original.transform.rotation,
-        scale: original.transform.scale,
-      ),
-      tags: original.tags,
-      children: original.children,
-    );
+    return original.copyWithComponent(TransformComponent(
+      position: Vec3(x: position.x, y: position.y, z: position.z),
+      rotation: transform.rotation,
+      scale: transform.scale,
+    ));
   }
 }

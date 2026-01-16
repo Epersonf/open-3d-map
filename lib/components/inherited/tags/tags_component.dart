@@ -1,4 +1,4 @@
-import 'game_component.dart';
+import '../../../domain/scene/game_component.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'tags_component.g.dart';
@@ -21,4 +21,13 @@ class TagsComponent implements GameComponent {
 
   @override
   TagsComponent copyWith() => TagsComponent(tags: Map.from(tags));
+  
+  @override
+  void onDestroy(owner) {}
+  
+  @override
+  void onStart(owner) {}
+  
+  @override
+  void onUpdate(owner, double dt) {}
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../stores/selection_store.dart';
 import '../../../../stores/project_store.dart';
@@ -56,20 +57,28 @@ class GizmoController {
 
   void update() {
     final selected = SelectionStore.instance.selected;
+    if (selected == null) {
+      _gizmoAssets?.move?.visible = false;
+      _gizmoAssets?.rotate?.visible = false;
+      _gizmoAssets?.scale?.visible = false;
+      return;
+    }
+    var transform = selected.getComponent<TransformComponent>();
+    if (transform == null) return;
     
     _gizmoAssets?.move?.visible = false;
     _gizmoAssets?.rotate?.visible = false;
     _gizmoAssets?.scale?.visible = false;
 
-    if (selected == null || _activeGizmoModel == null) return;
+    if (_activeGizmoModel == null) return;
 
     final gizmo = _activeGizmoModel!;
     gizmo.visible = true;
 
     gizmo.position.setValues(
-      selected.transform.position.x,
-      selected.transform.position.y,
-      selected.transform.position.z,
+      transform.position.x,
+      transform.position.y,
+      transform.position.z,
     );
     
     // --- LÓGICA DE ROTAÇÃO VISUAL DO GIZMO ---
@@ -81,9 +90,9 @@ class GizmoController {
     if (shouldRotateGizmo) {
       // Copia a rotação do objeto (converter graus -> rad)
       gizmo.rotation.set(
-        selected.transform.rotation.x * (3.14159 / 180),
-        selected.transform.rotation.y * (3.14159 / 180),
-        selected.transform.rotation.z * (3.14159 / 180),
+        transform.rotation.x * (3.14159 / 180),
+        transform.rotation.y * (3.14159 / 180),
+        transform.rotation.z * (3.14159 / 180),
       );
     } else {
       gizmo.rotation.set(0, 0, 0);

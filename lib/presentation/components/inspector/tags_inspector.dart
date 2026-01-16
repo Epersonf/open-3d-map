@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:open_3d_mapper/components/inherited/tags/tags_component.dart';
 import 'package:open_3d_mapper/presentation/components/inspector/tag_modal.dart';
 import '../../../domain/tag/tag.dart';
 import '../../../stores/selection_store.dart';
@@ -22,15 +23,8 @@ class _TagsInspectorState extends State<TagsInspector> {
     if (sel == null) return;
 
     final Map<String, String> map = {for (var t in _tags) t.key: t.value};
-    final updated = GameObject(
-      id: sel.id,
-      name: sel.name,
-      parentId: sel.parentId,
-      visual: sel.visual, // <--- CORREÇÃO: Mantém o visual
-      transform: sel.transform,
-      tags: map,
-      children: sel.children,
-    );
+    final newComponent = TagsComponent(tags: map);
+    final updated = sel.copyWithComponent(newComponent);
     ProjectStore.instance.updateGameObject(updated);
     SelectionStore.instance.select(updated);
   }

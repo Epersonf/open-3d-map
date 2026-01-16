@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'transform_inspector.dart';
-import 'tags_inspector.dart';
-import 'graphics_inspector.dart';
+import 'package:open_3d_mapper/stores/selection_store.dart';
+import '../../../components/core/component_registry.dart' as comp_ui;
 
 class InspectorPanel extends StatefulWidget {
   const InspectorPanel({super.key});
@@ -24,20 +23,30 @@ class _InspectorPanelState extends State<InspectorPanel> {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. Graphics Section
-            _buildSectionHeader('Graphics', 0),
-            if (_expanded[0])
-              Container(color: const Color(0xFF121212), child: const GraphicsInspector()),
+            // Dynamic component inspectors
+            Builder(builder: (_) {
+              final sel = SelectionStore.instance.selected;
+              if (sel == null) return const SizedBox.shrink();
 
-            // 2. Transform Section
-            _buildSectionHeader('Transform', 1),
-            if (_expanded[1])
-              Container(color: const Color(0xFF121212), child: const TransformInspector()),
-            
-            // 3. Tags Section
-            _buildSectionHeader('Tags', 2),
-            if (_expanded[2])
-              Container(color: const Color(0xFF121212), child: const TagsInspector()),
+              return Column(
+                children: sel.components.map((component) {
+                  return Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        color: const Color(0xFF1A1A1A),
+                        width: double.infinity,
+                        child: Text(
+                          component.id.toUpperCase(),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(color: const Color(0xFF121212), child: comp_ui.ComponentRegistry.createInspector(component)),
+                    ],
+                  );
+                }).toList(),
+              );
+            }),
           ],
         ),
       ),

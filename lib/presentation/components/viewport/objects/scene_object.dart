@@ -1,6 +1,7 @@
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../domain/scene/game_object.dart';
-import '../../../../domain/scene/visual_component.dart';
+import '../../../../components/inherited/visual/visual_component.dart';
 
 class SceneObject {
   final String id;
@@ -14,7 +15,7 @@ class SceneObject {
     required this.id,
     required this.gameObject,
     this.object3d,
-  }) : cachedVisual = gameObject.visual;
+  }) : cachedVisual = gameObject.getComponent<VisualComponent>()!;
 
   void disposeVisual() {
     object3d?.removeFromParent();
@@ -55,22 +56,24 @@ class SceneObject {
 
   void updateTransform() {
     if (object3d == null) return;
+    var transform = gameObject.getComponent<TransformComponent>();
+    if (transform == null) return;
     object3d!.position.setValues(
-      gameObject.transform.position.x,
-      gameObject.transform.position.y,
-      gameObject.transform.position.z,
+      transform.position.x,
+      transform.position.y,
+      transform.position.z,
     );
 
     object3d!.rotation.set(
-      gameObject.transform.rotation.x * (3.14159265359 / 180),
-      gameObject.transform.rotation.y * (3.14159265359 / 180),
-      gameObject.transform.rotation.z * (3.14159265359 / 180),
+      transform.rotation.x * (3.14159265359 / 180),
+      transform.rotation.y * (3.14159265359 / 180),
+      transform.rotation.z * (3.14159265359 / 180),
     );
 
     object3d!.scale.setValues(
-      gameObject.transform.scale.x,
-      gameObject.transform.scale.y,
-      gameObject.transform.scale.z,
+      transform.scale.x,
+      transform.scale.y,
+      transform.scale.z,
     );
   }
 }

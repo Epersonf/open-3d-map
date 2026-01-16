@@ -1,43 +1,76 @@
-import 'package:json_annotation/json_annotation.dart';
 import 'package:mobx/mobx.dart';
-import 'transform.dart';
-import 'visual_component.dart';
 import 'game_component.dart';
-import 'tags_component.dart';
+import '../../components/inherited/transform/transform_component.dart';
+import '../../components/inherited/visual/visual_component.dart';
+import '../../components/inherited/tags/tags_component.dart';
 
-part 'game_object.g.dart';
-
-@JsonSerializable(explicitToJson: true)
 class GameObject {
   final String id;
   String name;
   String? parentId;
-  final VisualComponent visual;
-  final Transform transform;
-  final Map<String, String> tags;
 
-  // Lista polimórfica de componentes (não serializada por enquanto)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  /// A única fonte de verdade: lista de componentes
   final List<GameComponent> components;
 
-  // Observable children list so MobX observers detect add/remove
+  /// Observable children list so MobX observers detect add/remove
   final ObservableList<GameObject> children;
 
   GameObject({
     required this.id,
     required this.name,
     this.parentId,
-    VisualComponent? visual,
-    required this.transform,
     Map<String, String>? tags,
-    List<GameObject>? children,
     List<GameComponent>? components,
-  })  : tags = tags ?? {},
-        visual = visual ?? VisualComponent(type: VisualType.none),
-        children = ObservableList.of(children ?? []),
-        components = components ?? [];
+    List<GameObject>? children,
+  })  : components = components ?? [],
+        children = ObservableList.of(children ?? []) {
 
-  // Helpers to maintain reactivity
+    if (getComponent<TransformComponent>() == null) {
+      this.components.add(TransformComponent.defaultValue());
+    }
+  }
+
+  Map<String, String> get tags => getComponent<TagsComponent>()?.tags ?? {};
+
+  // --- Component helpers ---
+  T? getComponent<T extends GameComponent>() {
+    for (final c in components) {
+      if (c is T) return c as T;
+    }
+    return null;
+  }
+
+  GameComponent? getComponentById(String id) {
+    try {
+      return components.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void setComponent<T extends GameComponent>(T component) {
+    components.removeWhere((c) => c.id == component.id);
+    components.add(component);
+    // sync tags into legacy map for compatibility
+    if (component is TagsComponent) {
+      // nothing else needed since getter reads from component
+    }
+  }
+
+  /// Return a new GameObject with the given component replaced/added (immutable helper)
+  GameObject copyWithComponent(GameComponent newComponent) {
+    final newComponents = components.where((c) => c.id != newComponent.id).toList();
+    newComponents.add(newComponent);
+
+    return GameObject(
+      id: id,
+      name: name,
+      parentId: parentId,
+      components: newComponents,
+      children: children,
+    );
+  }
+
   void addChild(GameObject child) {
     child.parentId = id;
     children.add(child);
@@ -47,42 +80,46 @@ class GameObject {
     children.removeWhere((c) => c.id == childId);
   }
 
-  /// Retorna o primeiro componente do tipo T
-  T? getComponent<T extends GameComponent>() {
+  // --- Manual JSON (polymorphic components) ---
+  factory GameObject.fromJson(Map<String, dynamic> json) {
+    final id = json['id'] as String;
+    final name = json['name'] as String;
+    final parentId = json['parentId'] as String?;
+
+    final List<GameComponent> comps = [];
+    if (json['components'] != null) {
+      final compMap = json['components'] as Map<String, dynamic>;
+      compMap.forEach((typeId, data) {
+        try {
+          final c = ComponentRegistry.create(typeId, data as Map<String, dynamic>);
+          comps.add(c);
+        } catch (e) {
+          // ignore unknown component types
+        }
+      });
+    }
+
+    final kids = <GameObject>[];
+    if (json['children'] != null) {
+      final list = json['children'] as List;
+      kids.addAll(list.map((c) => GameObject.fromJson(c as Map<String, dynamic>)));
+    }
+
+    return GameObject(id: id, name: name, parentId: parentId, components: comps, children: kids);
+  }
+
+  Map<String, dynamic> toJson() {
+    final compsMap = <String, dynamic>{};
     for (final c in components) {
-      if (c is T) return c as T;
+      compsMap[c.id] = c.toJson();
     }
 
-    // Fallbacks para compatibilidade com o modelo antigo
-    if (T == VisualComponent) {
-      return visual as T;
-    }
-    if (T == TagsComponent) {
-      return TagsComponent(tags: Map.from(tags)) as T;
-    }
-
-    return null;
+    return {
+      'id': id,
+      'name': name,
+      'parentId': parentId,
+      'components': compsMap,
+      'children': children.map((c) => c.toJson()).toList(),
+    };
   }
-
-  /// Substitui ou adiciona um componente; sincroniza campos legados quando possível
-  void setComponent<T extends GameComponent>(T component) {
-    // Remove existente do mesmo tipo
-    components.removeWhere((c) => c.runtimeType == component.runtimeType);
-    components.add(component);
-
-    // Sincroniza com campos legados para compatibilidade
-    if (component is VisualComponent) {
-      // visual é final; não podemos reassignar. No modelo atual mantemos visual separado.
-      // Para compatibilidade, se o visual interno for default (none) atualize via reflection
-      // (Aqui mantemos visual como a fonte de verdade para serialização antiga.)
-    }
-    if (component is TagsComponent) {
-      tags
-        ..clear()
-        ..addAll(component.tags);
-    }
-  }
-
-  factory GameObject.fromJson(Map<String, dynamic> json) => _$GameObjectFromJson(json);
-  Map<String, dynamic> toJson() => _$GameObjectToJson(this);
 }

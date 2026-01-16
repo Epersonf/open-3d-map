@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart' hide Transform;
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
+import 'package:open_3d_mapper/domain/general/vec3.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/project_store.dart';
-import '../../../domain/scene/transform.dart';
-import '../../../domain/scene/game_object.dart';
 
 class TransformInspector extends StatefulWidget {
   const TransformInspector({super.key});
@@ -48,7 +48,7 @@ class _TransformInspectorState extends State<TransformInspector> {
     final sel = SelectionStore.instance.selected;
     if (sel == null) return; // Removida verificação de _currentObject para evitar stale state
 
-    final newTransform = Transform(
+    final newTransform = TransformComponent(
       position: Vec3(
         x: double.tryParse(px.text) ?? 0.0,
         y: double.tryParse(py.text) ?? 0.0,
@@ -65,17 +65,7 @@ class _TransformInspectorState extends State<TransformInspector> {
         z: double.tryParse(sz.text) ?? 1.0,
       ),
     );
-
-    final updated = GameObject(
-      id: sel.id,
-      name: sel.name,
-      parentId: sel.parentId,
-      visual: sel.visual, // <--- CORREÇÃO: Mantém o componente visual
-      transform: newTransform,
-      tags: Map.from(sel.tags),
-      children: sel.children,
-    );
-
+    final updated = sel.copyWithComponent(newTransform);
     ProjectStore.instance.updateGameObject(updated);
     SelectionStore.instance.select(updated);
   }
@@ -157,17 +147,27 @@ class _TransformInspectorState extends State<TransformInspector> {
       }
 
     
-      _updateControllerIfNeeded(px, sel.transform.position.x);
-      _updateControllerIfNeeded(py, sel.transform.position.y);
-      _updateControllerIfNeeded(pz, sel.transform.position.z);
+      var transformComp = sel.getComponent<TransformComponent>();
+      if (transformComp == null) {
+        return Container(
+          padding: const EdgeInsets.all(12),
+          child: const Text(
+            'No Transform Component found',
+            style: TextStyle(color: Colors.white70),
+          ),
+        );
+      }
 
-      _updateControllerIfNeeded(rx, sel.transform.rotation.x);
-      _updateControllerIfNeeded(ry, sel.transform.rotation.y);
-      _updateControllerIfNeeded(rz, sel.transform.rotation.z);
+      _updateControllerIfNeeded(px, transformComp.position.x);
+      _updateControllerIfNeeded(py, transformComp.position.y);
+      _updateControllerIfNeeded(pz, transformComp.position.z);
 
-      _updateControllerIfNeeded(sx, sel.transform.scale.x);
-      _updateControllerIfNeeded(sy, sel.transform.scale.y);
-      _updateControllerIfNeeded(sz, sel.transform.scale.z);
+      _updateControllerIfNeeded(rx, transformComp.rotation.x);
+      _updateControllerIfNeeded(ry, transformComp.rotation.y);
+      _updateControllerIfNeeded(rz, transformComp.rotation.z);
+      _updateControllerIfNeeded(sx, transformComp.scale.x);
+      _updateControllerIfNeeded(sy, transformComp.scale.y);
+      _updateControllerIfNeeded(sz, transformComp.scale.z);
 
       return Column(
         mainAxisSize: MainAxisSize.min,

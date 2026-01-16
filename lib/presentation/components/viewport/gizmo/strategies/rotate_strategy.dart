@@ -1,6 +1,7 @@
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
+import 'package:open_3d_mapper/domain/general/vec3.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../../domain/scene/game_object.dart';
-import '../../../../../domain/scene/transform.dart' as domain;
 import '../../../../../stores/tool_store.dart';
 import '../gizmo_enums.dart';
 import 'transform_strategy.dart';
@@ -20,14 +21,20 @@ class RotateStrategy implements TransformStrategy {
   }
 
   @override
-  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
+  GameObject apply(
+      GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
+    var transform = original.getComponent<TransformComponent>();
+    if (transform == null) {
+      return original;
+    }
+
     final rad = 3.14159265359 / 180;
 
     // Converter Euler atual (graus) para Quaternion usando a ordem XYZ padrão
     final currentEuler = three.Euler(
-      original.transform.rotation.x * rad,
-      original.transform.rotation.y * rad,
-      original.transform.rotation.z * rad,
+      transform.rotation.x * rad,
+      transform.rotation.y * rad,
+      transform.rotation.z * rad,
       three.RotationOrders.xyz,
     );
     final currentQuat = three.Quaternion().setFromEuler(currentEuler);
@@ -57,24 +64,17 @@ class RotateStrategy implements TransformStrategy {
     }
 
     // Converter de volta para Euler (mantendo ordem XYZ)
-    final newEuler = three.Euler().setFromQuaternion(currentQuat, three.RotationOrders.xyz);
+    final newEuler =
+        three.Euler().setFromQuaternion(currentQuat, three.RotationOrders.xyz);
 
-    return GameObject(
-      id: original.id,
-      name: original.name,
-      parentId: original.parentId,
-      visual: original.visual,
-      transform: domain.Transform(
-        position: original.transform.position,
-        rotation: domain.Vec3(
-          x: newEuler.x * (180 / 3.14159265359),
-          y: newEuler.y * (180 / 3.14159265359),
-          z: newEuler.z * (180 / 3.14159265359),
-        ),
-        scale: original.transform.scale,
+    return original.copyWithComponent(TransformComponent(
+      position: transform.position,
+      rotation: Vec3(
+        x: newEuler.x * (180 / 3.14159265359),
+        y: newEuler.y * (180 / 3.14159265359),
+        z: newEuler.z * (180 / 3.14159265359),
       ),
-      tags: original.tags,
-      children: original.children,
-    );
+      scale: transform.scale,
+    ));
   }
 }

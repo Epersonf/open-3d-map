@@ -2,13 +2,13 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
+import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
 import 'package:open_3d_mapper/domain/asset/asset.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import '../domain/project/project.dart';
 import '../domain/scene/game_object.dart';
-import '../domain/scene/visual_component.dart';
-import '../domain/scene/transform.dart';
 import '../domain/scene/scene.dart';
 import '../stores/selection_store.dart';
 
@@ -109,12 +109,14 @@ class ProjectStore extends ChangeNotifier {
       _project!.assets.add(a);
     }
 
+    final visual = VisualComponent(type: VisualType.mesh, assetId: assetId, visibleInRuntime: true);
+    final transformComp = TransformComponent.defaultValue();
+
     final go = GameObject(
       id: goId,
       name: base,
       parentId: null,
-      visual: VisualComponent(type: VisualType.mesh, assetId: assetId, visibleInRuntime: true),
-      transform: Transform(position: Vec3(x: 0, y: 0, z: 0), rotation: Vec3(x: 0, y: 0, z: 0), scale: Vec3(x: 1, y: 1, z: 1)),
+      components: [transformComp, visual],
     );
 
     if (_project!.scenes.isEmpty) {
@@ -248,8 +250,7 @@ class ProjectStore extends ChangeNotifier {
       id: const Uuid().v4(),
       name: 'Empty Object',
       parentId: parentId,
-      // visual padrão já é Type.none
-      transform: Transform(position: Vec3(x: 0, y: 0, z: 0), rotation: Vec3(x: 0, y: 0, z: 0), scale: Vec3(x: 1, y: 1, z: 1)),
+      components: [TransformComponent.defaultValue(), VisualComponent(type: VisualType.none)],
     );
 
     if (_project!.scenes.isEmpty) {
@@ -312,13 +313,7 @@ class ProjectStore extends ChangeNotifier {
       id: removed!.id,
       name: removed!.name,
       parentId: newParentId,
-      visual: removed!.visual,
-      transform: Transform(
-        position: Vec3(x: removed!.transform.position.x, y: removed!.transform.position.y, z: removed!.transform.position.z),
-        rotation: Vec3(x: removed!.transform.rotation.x, y: removed!.transform.rotation.y, z: removed!.transform.rotation.z),
-        scale: Vec3(x: removed!.transform.scale.x, y: removed!.transform.scale.y, z: removed!.transform.scale.z),
-      ),
-      tags: Map.from(removed!.tags),
+      components: removed!.components,
       children: removed!.children,
     );
 
@@ -339,17 +334,14 @@ class ProjectStore extends ChangeNotifier {
     final newId = const Uuid().v4();
     final newName = isRootClone ? '${source.name} (Clone)' : source.name;
 
+    // Clone components via their copyWith
+    final newComponents = source.components.map((c) => c.copyWith()).toList();
+
     return GameObject(
       id: newId,
       name: newName,
       parentId: parentId,
-      visual: source.visual.copyWith(),
-      transform: Transform(
-        position: Vec3(x: source.transform.position.x, y: source.transform.position.y, z: source.transform.position.z),
-        rotation: Vec3(x: source.transform.rotation.x, y: source.transform.rotation.y, z: source.transform.rotation.z),
-        scale: Vec3(x: source.transform.scale.x, y: source.transform.scale.y, z: source.transform.scale.z),
-      ),
-      tags: Map.from(source.tags),
+      components: newComponents,
       children: source.children.map((child) => _deepCloneGameObject(child, newId)).toList(),
     );
   }

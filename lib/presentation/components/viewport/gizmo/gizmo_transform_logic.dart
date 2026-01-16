@@ -1,5 +1,6 @@
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
+
 import '../../../../domain/scene/game_object.dart';
-import '../../../../domain/scene/transform.dart' as domain;
 import '../../../../stores/tool_store.dart';
 
 class GizmoTransformLogic {
@@ -10,17 +11,19 @@ class GizmoTransformLogic {
     required String axis,
     required double delta,
   }) {
-    double px = original.transform.position.x;
-    double py = original.transform.position.y;
-    double pz = original.transform.position.z;
-
-    double rx = original.transform.rotation.x;
-    double ry = original.transform.rotation.y;
-    double rz = original.transform.rotation.z;
-
-    double sx = original.transform.scale.x;
-    double sy = original.transform.scale.y;
-    double sz = original.transform.scale.z;
+    var transformComp = original.getComponent<TransformComponent>();
+    if (transformComp == null) {
+      return original;
+    }
+    double px = transformComp.position.x;
+    double py = transformComp.position.y;
+    double pz = transformComp.position.z;
+    double rx = transformComp.rotation.x;
+    double ry = transformComp.rotation.y;
+    double rz = transformComp.rotation.z;
+    double sx = transformComp.scale.x;
+    double sy = transformComp.scale.y;
+    double sz = transformComp.scale.z;
 
     if (mode == GizmoMode.translate) {
       if (axis == 'X') px += delta;
@@ -43,12 +46,6 @@ class GizmoTransformLogic {
       id: original.id,
       name: original.name,
       parentId: original.parentId,
-      visual: original.visual,
-      transform: domain.Transform(
-        position: domain.Vec3(x: px, y: py, z: pz),
-        rotation: domain.Vec3(x: rx, y: ry, z: rz),
-        scale: domain.Vec3(x: sx, y: sy, z: sz),
-      ),
       tags: original.tags,
       children: original.children,
     );

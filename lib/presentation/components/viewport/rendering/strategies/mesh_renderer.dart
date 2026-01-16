@@ -1,3 +1,4 @@
+import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
 import 'package:open_3d_mapper/presentation/components/viewport/managers/model_manager.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../../domain/scene/game_object.dart';
@@ -11,7 +12,11 @@ class MeshRenderer implements SceneComponentRenderer {
 
   @override
   Future<three.Object3D> render(GameObject gameObject) async {
-    final assetId = gameObject.visual.assetId;
+    var visual = gameObject.getComponent<VisualComponent>();
+    if (visual == null) {
+      return three.Group();
+    }
+    final assetId = visual.assetId;
     if (assetId != null) {
       final model = await modelManager.loadModel(assetId, projectPath, '');
       if (model != null) return model.clone();

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For LogicalKeyboardKey and KeyEvent
 import 'package:mobx/mobx.dart' hide Listener;
+import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
+import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
 import 'package:open_3d_mapper/presentation/components/viewport/free_camera_controller.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../stores/project_store.dart';
@@ -239,7 +241,8 @@ class _Viewport3DState extends State<Viewport3D> {
     final target = CameraStore.instance.focusTarget;
     if (target == null) return;
 
-    final t = target.transform;
+    final t = target.getComponent<TransformComponent>();
+    if (t == null) return;
     final targetPos = three.Vector3(t.position.x, t.position.y, t.position.z);
 
     // Distância padrão para o foco (pode ser melhorada calculando bounds)
@@ -346,7 +349,7 @@ class _Viewport3DState extends State<Viewport3D> {
 
     final project = ProjectStore.instance.project!;
     final asset = project.assets.firstWhere(
-      (a) => a.id == gameObject.visual.assetId,
+      (a) => a.id == gameObject.getComponent<VisualComponent>()?.assetId,
       orElse: () => Asset(id: '', path: '', type: ''),
     );
     
@@ -371,7 +374,7 @@ class _Viewport3DState extends State<Viewport3D> {
     // Configurar propriedades do objeto 3D
     object3d.name = gameObject.name;
     object3d.userData['gameObjectId'] = gameObject.id;
-    object3d.userData['assetId'] = gameObject.visual.assetId;
+    object3d.userData['assetId'] = gameObject.getComponent<VisualComponent>()?.assetId;
 
     final sceneObject = SceneObject(
       id: gameObject.id,

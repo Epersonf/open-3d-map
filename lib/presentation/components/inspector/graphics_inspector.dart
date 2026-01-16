@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import '../../../domain/scene/game_object.dart';
-import '../../../domain/scene/visual_component.dart';
+import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
 
@@ -11,17 +10,7 @@ class GraphicsInspector extends StatelessWidget {
   void _updateVisual(VisualComponent newVisual) {
     final sel = SelectionStore.instance.selected;
     if (sel == null) return;
-
-    final updated = GameObject(
-      id: sel.id,
-      name: sel.name,
-      parentId: sel.parentId,
-      visual: newVisual,
-      transform: sel.transform,
-      tags: sel.tags,
-      children: sel.children,
-    );
-
+    final updated = sel.copyWithComponent(newVisual);
     ProjectStore.instance.updateGameObject(updated);
     SelectionStore.instance.select(updated);
   }
@@ -31,8 +20,16 @@ class GraphicsInspector extends StatelessWidget {
     return Observer(builder: (_) {
       final sel = SelectionStore.instance.selected;
       if (sel == null) return const SizedBox.shrink();
-      
-      final visual = sel.visual;
+      final visual = sel.getComponent<VisualComponent>();
+      if (visual == null) {
+        return Container(
+          padding: const EdgeInsets.all(12),
+          child: const Text(
+            'No Visual Component found',
+            style: TextStyle(color: Colors.white70),
+          ),
+        );
+      }
 
       return Container(
         padding: const EdgeInsets.all(12),

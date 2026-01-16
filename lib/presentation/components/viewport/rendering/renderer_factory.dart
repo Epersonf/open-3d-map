@@ -1,6 +1,6 @@
 import 'package:open_3d_mapper/presentation/components/viewport/managers/model_manager.dart';
 
-import '../../../../domain/scene/visual_component.dart';
+import '../../../../components/inherited/visual/visual_component.dart';
 import 'scene_component_renderer.dart';
 import 'strategies/icon_renderer.dart';
 import 'strategies/mesh_renderer.dart';
