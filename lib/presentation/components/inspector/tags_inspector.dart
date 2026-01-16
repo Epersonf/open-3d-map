@@ -26,7 +26,7 @@ class _TagsInspectorState extends State<TagsInspector> {
       id: sel.id,
       name: sel.name,
       parentId: sel.parentId,
-      assetId: sel.assetId,
+      visual: sel.visual, // <--- CORREÇÃO: Mantém o visual
       transform: sel.transform,
       tags: map,
       children: sel.children,

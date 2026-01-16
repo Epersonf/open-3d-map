@@ -63,7 +63,7 @@ class RotateStrategy implements TransformStrategy {
       id: original.id,
       name: original.name,
       parentId: original.parentId,
-      assetId: original.assetId,
+      visual: original.visual,
       transform: domain.Transform(
         position: original.transform.position,
         rotation: domain.Vec3(

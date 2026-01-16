@@ -344,36 +344,34 @@ class _Viewport3DState extends State<Viewport3D> {
   Future<SceneObject?> _createSceneObject(GameObject gameObject) async {
     three.Object3D? object3d;
 
-    if (gameObject.assetId != null) {
-      final project = ProjectStore.instance.project!;
-      final asset = project.assets.firstWhere(
-        (a) => a.id == gameObject.assetId,
-        orElse: () => Asset(id: '', path: '', type: ''),
+    final project = ProjectStore.instance.project!;
+    final asset = project.assets.firstWhere(
+      (a) => a.id == gameObject.visual.assetId,
+      orElse: () => Asset(id: '', path: '', type: ''),
+    );
+    
+    if (asset.path.isNotEmpty && ProjectStore.instance.projectPath != null) {
+      final model = await modelManager.loadModel(
+        asset.id,
+        ProjectStore.instance.projectPath!,
+        asset.path,
       );
       
-      if (asset.path.isNotEmpty && ProjectStore.instance.projectPath != null) {
-        final model = await modelManager.loadModel(
-          asset.id,
-          ProjectStore.instance.projectPath!,
-          asset.path,
-        );
-        
-        if (model != null) {
-          object3d = model.clone();
+      if (model != null) {
+        object3d = model.clone();
 
-          // Ensure this clone has its own userData map so it doesn't share
-          // the same reference with the original model or other clones.
-          object3d.userData = <String, dynamic>{};
-        }
+        // Ensure this clone has its own userData map so it doesn't share
+        // the same reference with the original model or other clones.
+        object3d.userData = <String, dynamic>{};
       }
     }
-
+  
     object3d ??= three.Object3D();
     
     // Configurar propriedades do objeto 3D
     object3d.name = gameObject.name;
     object3d.userData['gameObjectId'] = gameObject.id;
-    object3d.userData['assetId'] = gameObject.assetId;
+    object3d.userData['assetId'] = gameObject.visual.assetId;
 
     final sceneObject = SceneObject(
       id: gameObject.id,

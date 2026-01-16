@@ -70,7 +70,7 @@ Future<void> showHierarchyContextMenu(BuildContext context, Offset globalPositio
         id: node.id,
         name: newName,
         parentId: node.parentId,
-        assetId: node.assetId,
+        visual: node.visual,
         transform: node.transform,
         tags: node.tags,
         children: node.children,

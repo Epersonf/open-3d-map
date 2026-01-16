@@ -43,7 +43,7 @@ class GizmoTransformLogic {
       id: original.id,
       name: original.name,
       parentId: original.parentId,
-      assetId: original.assetId,
+      visual: original.visual,
       transform: domain.Transform(
         position: domain.Vec3(x: px, y: py, z: pz),
         rotation: domain.Vec3(x: rx, y: ry, z: rz),

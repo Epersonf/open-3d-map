@@ -10,9 +10,10 @@ GameObject _$GameObjectFromJson(Map<String, dynamic> json) => GameObject(
       id: json['id'] as String,
       name: json['name'] as String,
       parentId: json['parentId'] as String?,
-      assetId: json['assetId'] as String?,
-      visual: json['visual'] == null
-          ? null
+        visual: json['visual'] == null
+          ? (json['assetId'] == null
+            ? null
+            : VisualComponent(type: VisualType.mesh, assetId: json['assetId'] as String, visibleInRuntime: true))
           : VisualComponent.fromJson(json['visual'] as Map<String, dynamic>),
       transform: Transform.fromJson(json['transform'] as Map<String, dynamic>),
       tags: (json['tags'] as Map<String, dynamic>?)?.map(
@@ -28,7 +29,7 @@ Map<String, dynamic> _$GameObjectToJson(GameObject instance) =>
       'id': instance.id,
       'name': instance.name,
       'parentId': instance.parentId,
-      'assetId': instance.assetId,
+      'assetId': instance.visual.assetId,
       'visual': instance.visual.toJson(),
       'transform': instance.transform.toJson(),
       'tags': instance.tags,

@@ -70,7 +70,7 @@ class _TransformInspectorState extends State<TransformInspector> {
       id: sel.id,
       name: sel.name,
       parentId: sel.parentId,
-      assetId: sel.assetId,
+      visual: sel.visual, // <--- CORREÇÃO: Mantém o componente visual
       transform: newTransform,
       tags: Map.from(sel.tags),
       children: sel.children,

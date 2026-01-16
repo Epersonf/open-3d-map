@@ -16,7 +16,6 @@ class GraphicsInspector extends StatelessWidget {
       id: sel.id,
       name: sel.name,
       parentId: sel.parentId,
-      assetId: sel.assetId,
       visual: newVisual,
       transform: sel.transform,
       tags: sel.tags,

@@ -87,7 +87,7 @@ class TranslateStrategy implements TransformStrategy {
       id: original.id,
       name: original.name,
       parentId: original.parentId,
-      assetId: original.assetId,
+      visual: original.visual,
       transform: domain.Transform(
         position: domain.Vec3(x: position.x, y: position.y, z: position.z),
         rotation: original.transform.rotation,

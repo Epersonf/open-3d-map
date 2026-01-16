@@ -10,8 +10,6 @@ class GameObject {
   final String id;
   String name;
   String? parentId;
-  // Backwards-compatible assetId (may be null). Prefer `visual`.
-  final String? assetId;
   final VisualComponent visual;
   final Transform transform;
   final Map<String, String> tags;
@@ -23,7 +21,6 @@ class GameObject {
     required this.id,
     required this.name,
     this.parentId,
-    this.assetId,
     VisualComponent? visual,
     required this.transform,
     Map<String, String>? tags,

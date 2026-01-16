@@ -83,7 +83,7 @@ class ScaleStrategy implements TransformStrategy {
       id: original.id,
       name: original.name,
       parentId: original.parentId,
-      assetId: original.assetId,
+      visual: original.visual, // <--- Preserve visual
       transform: domain.Transform(
         position: original.transform.position,
         rotation: original.transform.rotation,
