@@ -7,6 +7,7 @@ import 'package:three_js/three_js.dart' as three;
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/tool_store.dart';
+import '../../../stores/camera_store.dart';
 import '../../../domain/scene/game_object/game_object.dart';
 import 'controllers/selection_controller.dart';
 import 'package:open_3d_mapper/core/input/input_manager.dart';
@@ -34,6 +35,7 @@ class _Viewport3DState extends State<Viewport3D> {
   bool _inputConsumed = false;
 
   VoidCallback? _projectListener;
+  VoidCallback? _cameraStoreListener;
   // Listener para requisições de foco da câmera
   ReactionDisposer? _selectionDisposer;
   final GlobalKey _viewportKey = GlobalKey();
@@ -57,6 +59,10 @@ class _Viewport3DState extends State<Viewport3D> {
     // Inicializar gerenciadores que não dependem da cena
     modelManager = ModelManager();
 
+    // Registrar listener do CameraStore para reagir a solicitações de foco
+    _cameraStoreListener = _onCameraFocusRequest;
+    CameraStore.instance.addListener(_cameraStoreListener!);
+
     // Scene-dependent managers will be created once ThreeJS setup completes
     // via [_onThreeJsReady]. This avoids accessing `threeJs.scene` before
     // it has been initialized by the ThreeJS runtime.
@@ -69,6 +75,10 @@ class _Viewport3DState extends State<Viewport3D> {
     if (_projectListener != null) {
       ProjectStore.instance.removeListener(_projectListener!);
       _projectListener = null;
+    }
+    if (_cameraStoreListener != null) {
+      CameraStore.instance.removeListener(_cameraStoreListener!);
+      _cameraStoreListener = null;
     }
     if (_selectionDisposer != null) {
       _selectionDisposer!();
@@ -335,5 +345,44 @@ class _Viewport3DState extends State<Viewport3D> {
       },
       fireImmediately: true,
     );
+  }
+
+  /// Método chamado quando o CameraStore solicita foco em um objeto
+  void _onCameraFocusRequest() {
+    // Se a cena não estiver pronta ou não houver alvo, ignora
+    if (!_ready) return;
+
+    final target = CameraStore.instance.focusTarget;
+    if (target == null) return;
+
+    // Busca o objeto 3D correspondente na cena
+    final sceneObject = sceneManager.getSceneObject(target.id);
+    if (sceneObject != null && sceneObject.object3d != null) {
+      _performFocus(sceneObject.object3d!);
+    }
+
+    // Marca como consumido para não repetir
+    CameraStore.instance.consumeRequest();
+  }
+
+  /// Executa o foco da câmera no objeto 3D especificado
+  void _performFocus(three.Object3D targetObj) {
+    // Lógica similar à do TransformComponent
+    final targetPos = three.Vector3();
+    targetObj.getWorldPosition(targetPos);
+
+    const double distance = 5.0;
+    // Offset simples (Pode ser melhorado calculando BoundingBox futuramente)
+    final offset = three.Vector3(0, 2, distance);
+
+    threeJs.camera.position.setValues(
+      targetPos.x + offset.x,
+      targetPos.y + offset.y,
+      targetPos.z + offset.z,
+    );
+    threeJs.camera.lookAt(targetPos);
+    
+    // Garante atualização da matriz da câmera
+    threeJs.camera.updateMatrixWorld();
   }
 }
