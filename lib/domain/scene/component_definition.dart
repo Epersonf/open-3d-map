@@ -1,4 +1,4 @@
-import 'package:open_3d_mapper/domain/scene/game_component.dart';
+import 'package:open_3d_mapper/components/game_component.dart';
 
 /// Factory typedefs for component creation
 typedef ComponentFactory = GameComponent Function(Map<String, dynamic> json);

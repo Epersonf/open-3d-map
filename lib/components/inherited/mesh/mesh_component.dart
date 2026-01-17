@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:open_3d_mapper/domain/scene/game_object/game_object.dart';
 import 'package:three_js/three_js.dart' as three;
-import '../../../domain/scene/game_component.dart';
+import '../../game_component.dart';
 import '../../../domain/scene/scene_context.dart';
 import '../../../domain/asset/asset.dart';
 import 'mesh_inspector.dart';

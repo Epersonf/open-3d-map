@@ -1,4 +1,4 @@
-import 'package:open_3d_mapper/domain/scene/game_component.dart';
+import 'package:open_3d_mapper/components/game_component.dart';
 
 import 'component_definition.dart';
 

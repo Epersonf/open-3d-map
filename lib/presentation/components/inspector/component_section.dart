@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../domain/scene/game_component.dart';
+import '../../../components/game_component.dart';
 
 class ComponentSection extends StatefulWidget {
   final GameComponent component;
