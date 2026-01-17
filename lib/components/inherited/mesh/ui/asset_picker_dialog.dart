@@ -170,7 +170,7 @@ class _AssetPickerDialogState extends State<AssetPickerDialog> {
                           title: Text(name, style: const TextStyle(color: Colors.white)),
                           onTap: () {
                             if (isDir) {
-                              _navigateDown(entity as Directory);
+                              _navigateDown(entity);
                             } else {
                               _selectFile(entity as File);
                             }
