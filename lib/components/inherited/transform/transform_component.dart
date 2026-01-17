@@ -6,9 +6,8 @@ import '../../../domain/scene/game_component.dart';
 import '../../../domain/scene/game_object/game_object.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../domain/scene/scene_context.dart';
-// Import do Gizmo Controller
 import 'package:open_3d_mapper/components/inherited/transform/gizmo/gizmo_controller.dart';
-import 'package:flutter/services.dart'; // For LogicalKeyboardKey
+import 'package:flutter/services.dart'; 
 import 'package:open_3d_mapper/stores/selection_store.dart';
 
 part 'transform_component.g.dart';
@@ -19,7 +18,6 @@ class TransformComponent extends GameComponent {
 
   @override
   String get id => typeId;
-
   
   final Vec3 position;
   final Vec3 rotation;
@@ -60,32 +58,25 @@ class TransformComponent extends GameComponent {
   @override
   void onStart(SceneContext owner) {
     _applyTransform(owner);
-    // Configura o GizmoController com a cena e câmera atuais
     GizmoController.instance.setup(owner.scene, owner.camera);
   }
 
   @override
   void onUpdate(SceneContext owner, double dt) {
     _applyTransform(owner);
-    // [CORREÇÃO CRÍTICA AQUI]
-    // Recupera o ID do GameObject dono deste componente
+    
     final myId = owner.parent.userData['gameObjectId'];
     final selected = SelectionStore.instance.selected;
 
-    // Só atualizamos o Gizmo se ESTE for o objeto selecionado.
-    // Isso impede que os filhos sobrescrevam a referência do Pai no GizmoController.
     if (selected != null && selected.id == myId) {
       GizmoController.instance.update(owner.parent);
     }
 
-    // --- Polling input for focus action (F) ---
     try {
       if (owner.input.isKeyDown(LogicalKeyboardKey.keyF)) {
         final selected = SelectionStore.instance.selected;
-        // Recupera o ID deste objeto através do userData do Object3D pai
         final myId = owner.parent.userData['gameObjectId'];
 
-        // Compara ID com ID (seguro contra recriação de instâncias no Store)
         if (selected != null && selected.id == myId) {
           _performFocus(owner);
         }
@@ -99,19 +90,43 @@ class TransformComponent extends GameComponent {
     return true;
   }
 
+  // [CORREÇÃO PRINCIPAL]
   void _applyTransform(SceneContext owner) {
     final object3d = owner.parent;
 
+    // 1. Aplica Posição
     object3d.position.setValues(position.x, position.y, position.z);
 
+    // 2. Aplica Escala
+    object3d.scale.setValues(scale.x, scale.y, scale.z);
+
+    // 3. Aplica Rotação de forma Robustez
     const deg2rad = 3.14159265359 / 180.0;
-    object3d.rotation.set(
+    
+    // Criamos um Euler explícito para garantir a ordem XYZ
+    final euler = three.Euler(
       rotation.x * deg2rad,
       rotation.y * deg2rad,
       rotation.z * deg2rad,
+      three.RotationOrders.xyz,
     );
 
-    object3d.scale.setValues(scale.x, scale.y, scale.z);
+    // Atualiza o Euler do objeto
+    object3d.rotation.copy(euler);
+    
+    // [FIX] Sincroniza explicitamente o Quaternion. 
+    // Em algumas implementações, se você atualizar apenas o Euler e a engine
+    // estiver usando Quaternions internamente para composição de matriz, ocorre desync.
+    object3d.quaternion.setFromEuler(euler);
+
+    // [FIX] Força a atualização da Matriz Local imediatamente.
+    // Isso garante que 'object3d.matrix' esteja correta para o cálculo dos filhos
+    // antes mesmo do render loop passar aqui.
+    object3d.updateMatrix();
+    
+    // [OPCIONAL] Se a biblioteca expor essa propriedade, descomente.
+    // Isso força o renderer a recalcular a world matrix deste objeto e dos filhos.
+    // object3d.matrixWorldNeedsUpdate = true;
   }
 
   @override
@@ -126,24 +141,25 @@ class TransformComponent extends GameComponent {
     GameObject? newParent,
     Map<String, GameObject> objectLookup,
   ) {
-    // 1. Calcula a Matriz Global atual do objeto (baseada no pai antigo)
+    // A lógica de reparenting está correta matematicamente.
+    // Ela "bake" (fixa) a posição visual atual em coordenadas locais do novo pai.
+    
     final globalMatrix = _computeGlobalMatrix(self, oldParent, objectLookup);
 
-    // 2/3. Calcula a Inversa da Matriz Global do novo pai e multiplica: NovaLocal = InversaNovoPai * GlobalAtual
+    // Se houver novo pai, calculamos: Local = Inv(WorldPai) * WorldFilho
     final newLocalMatrix = (newParent != null)
         ? (_computeGlobalMatrix(newParent, newParent.parentId != null ? objectLookup[newParent.parentId] : null, objectLookup)
               ..invert())
             .multiply(globalMatrix)
         : globalMatrix;
 
-    // 4. Decompõe a matriz resultante em Posição, Rotação e Escala
     final newPos = three.Vector3();
     final newQuat = three.Quaternion();
     final newScale = three.Vector3();
+    
     newLocalMatrix.decompose(newPos, newQuat, newScale);
     final newEuler = three.Euler().setFromQuaternion(newQuat);
 
-    // 5. Retorna uma cópia do componente com os novos valores
     return copyWith(
       position: Vec3(x: newPos.x, y: newPos.y, z: newPos.z),
       rotation: Vec3(
@@ -155,7 +171,6 @@ class TransformComponent extends GameComponent {
     );
   }
 
-  /// Helper recursivo para calcular matriz global usando apenas dados puros
   three.Matrix4 _computeGlobalMatrix(
     GameObject obj,
     GameObject? parent,
@@ -163,6 +178,7 @@ class TransformComponent extends GameComponent {
   ) {
     final transform = obj.getComponent<TransformComponent>();
     final localMat = three.Matrix4();
+    
     if (transform != null) {
       localMat.compose(
         three.Vector3(transform.position.x, transform.position.y, transform.position.z),
@@ -186,19 +202,17 @@ class TransformComponent extends GameComponent {
 
   @override
   void onSelected(SceneContext owner) {
-    // Força atualização imediata ao selecionar, passando o objeto correto
     GizmoController.instance.update(owner.parent);
   }
 
   void _performFocus(SceneContext owner) {
     final camera = owner.camera;
-    // Pega a posição global para focar corretamente mesmo se for filho
     final targetPos = three.Vector3();
     owner.parent.getWorldPosition(targetPos);
 
     const double distance = 5.0;
     final offset = three.Vector3(0, 2, distance);
-
+    
     camera.position.setValues(
       targetPos.x + offset.x,
       targetPos.y + offset.y,
