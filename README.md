@@ -9,7 +9,7 @@ Pré-requisitos
 - Verifique com `flutter doctor -v` que o suporte a Windows está OK.
 
 Como usar
-1. Abra um terminal na pasta do projeto (`flutter_desktop_app`).
+1. Abra um terminal na pasta do projeto (`O3M`).
 2. Caso ainda não tenha os arquivos de plataforma, rode:
 
 ```
