@@ -240,9 +240,6 @@ class _Viewport3DState extends State<Viewport3D> {
 
   /// Método centralizado para gerenciar input de teclado
   void _onKey(KeyEvent event) {
-    // 1. Passa o evento para a câmera (para movimento WASD+QE)
-    // A câmera internamente já verifica se o botão direito está pressionado para se mover
-    freeCam.onKey(event);
 
     // 2. Atalhos de Editor (Apenas no KeyDown para não disparar várias vezes)
     if (event is KeyDownEvent) {
@@ -260,8 +257,6 @@ class _Viewport3DState extends State<Viewport3D> {
       } else if (key == LogicalKeyboardKey.keyR) {
         ToolStore.instance.setMode(GizmoMode.rotate);
       }
-
-      // Focus handled by components via InputManager polling; removed from Viewport
     }
   }
 

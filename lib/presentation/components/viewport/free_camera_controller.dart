@@ -1,40 +1,32 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:three_js/three_js.dart' as three;
+import 'package:open_3d_mapper/core/input/input_manager.dart'; // Ajuste o import conforme seu projeto
 
 class FreeCameraController {
   final three.ThreeJS threeJs;
 
   bool rightMouseDown = false;
-  final Set<LogicalKeyboardKey> keys = {};
-
+  
+  // Configurações de velocidade
   double baseSpeed = 6.0;
   double runMultiplier = 2.5;
   double lookSpeed = 2.5;
 
-  FreeCameraController(this.threeJs) {
-    // NOTA: Não acessar `threeJs.camera` aqui — a câmera pode não
-    // estar inicializada quando o controller for criado (ex: initState).
-    // A configuração dependente da câmera deve ser feita em `initialize()`.
-  }
+  FreeCameraController(this.threeJs);
 
-  /// Inicializa partes que dependem da existência da câmera.
-  /// Deve ser chamada depois que a cena/câmera do ThreeJS estiver pronta.
   void initialize() {
     try {
       final cam = threeJs.camera;
       cam.rotation.order = three.RotationOrders.yxz;
-    } catch (_) {
-      // Se a câmera ainda não estiver pronta, ignoramos —
-      // o chamador deve garantir que `initialize()` seja executado
-      // assim que a cena estiver disponível.
-    }
+    } catch (_) {}
 
-    // Registra o loop de atualização (mesmo se a câmera ainda não estiver configurada,
-    // `_update` só acessará a câmera quando necessário durante o loop).
     threeJs.addAnimationEvent(_update);
   }
+
+  // --- Manipulação de Mouse ---
+  // Esses métodos devem ser chamados pelo seu Widget/Viewport 
+  // quando o InputManager não consumir o evento (ex: Gizmo não clicado)
 
   void onPointerDown(PointerDownEvent e) {
     if (e.kind == PointerDeviceKind.mouse &&
@@ -45,6 +37,8 @@ class FreeCameraController {
 
   void onPointerUp(PointerUpEvent e) {
     if (e.kind == PointerDeviceKind.mouse) {
+      // Se soltar qualquer botão e for o direito, paramos
+      // (nota: em alguns casos pode querer verificar se foi especificamente o direito)
       rightMouseDown = false;
     }
   }
@@ -54,79 +48,82 @@ class FreeCameraController {
 
     final cam = threeJs.camera;
 
-    // Garante que a ordem não foi perdida (ex: após um lookAt)
     if (cam.rotation.order != three.RotationOrders.yxz) {
       cam.rotation.order = three.RotationOrders.yxz;
       cam.updateMatrix();
     }
 
-    // Y = Yaw (Esquerda/Direita global)
+    // Rotação da Câmera (Mouse Look)
     cam.rotation.y -= e.delta.dx * 0.0025 * lookSpeed;
-
-    // X = Pitch (Cima/Baixo local)
     cam.rotation.x -= e.delta.dy * 0.0025 * lookSpeed;
 
-    // Trava para não dar cambalhota (olhar para trás por cima da cabeça)
-    const double maxPitch = 1.50; // aprox 85 graus
+    const double maxPitch = 1.50; 
     if (cam.rotation.x > maxPitch) cam.rotation.x = maxPitch;
     if (cam.rotation.x < -maxPitch) cam.rotation.x = -maxPitch;
 
-    // Força Z a zero e realinha o vetor UP
     cam.rotation.z = 0;
     cam.up.setValues(0, 1, 0);
   }
 
-  void onKey(KeyEvent e) {
-    final key = e.logicalKey;
-
-    if (e is KeyDownEvent) {
-      keys.add(key);
-    } else if (e is KeyUpEvent) {
-      keys.remove(key);
-    }
-  }
+  // --- Loop de Atualização (Frame a Frame) ---
 
   void _update(double dt) {
-    // Permite movimento por teclado mesmo sem o botão direito pressionado
-    if (!rightMouseDown && keys.isEmpty) return;
+    // REGRA: Só movimenta se o botão direito estiver segurado
+    if (!rightMouseDown) return;
 
+    final input = InputManager.instance;
     final cam = threeJs.camera;
 
+    // Velocidade
     double speed = baseSpeed * dt;
-    if (keys.contains(LogicalKeyboardKey.shiftLeft) ||
-        keys.contains(LogicalKeyboardKey.shiftRight)) {
+    if (input.isKeyDown(LogicalKeyboardKey.shiftLeft) ||
+        input.isKeyDown(LogicalKeyboardKey.shiftRight)) {
       speed *= runMultiplier;
     }
 
-    // Pega a direção que a câmera está olhando
+    // --- CÁLCULO DOS VETORES DE DIREÇÃO ---
+
+    // 1. Forward (Para onde a câmera aponta em 3D)
     final forward = three.Vector3.zero();
     cam.getWorldDirection(forward);
-    forward.y = 0; // Zera a inclinação Y para andar apenas no plano horizontal
-    forward.normalize();
+    forward.normalize(); 
+    // REMOVIDO: forward.y = 0; -> Isso permitia andar apenas no chão. 
+    // Agora 'forward' aponta exatamente para onde você olha.
 
-    // Calcula o vetor da direita (Right)
-    final right = three.Vector3(0, 1, 0).cross(forward);
+    // 2. Right (Vetor lateral, sempre paralelo ao chão para strafe confortável)
+    // Para o strafe (A/D), geralmente queremos manter o movimento horizontal 
+    // para não "afundar" no chão ao andar de lado olhando para baixo.
+    final right = three.Vector3(0, 1, 0).cross(forward); 
     right.normalize();
 
-    if (keys.contains(LogicalKeyboardKey.keyW)) {
+    // --- MOVIMENTAÇÃO WASD ---
+    
+    // W/S: Move na direção do olhar (sobe se olhar pra cima, desce se olhar pra baixo)
+    if (input.isKeyDown(LogicalKeyboardKey.keyW)) {
       cam.position.addScaled(forward, speed);
     }
-    if (keys.contains(LogicalKeyboardKey.keyS)) {
+    if (input.isKeyDown(LogicalKeyboardKey.keyS)) {
       cam.position.addScaled(forward, -speed);
     }
-    if (keys.contains(LogicalKeyboardKey.keyA)) {
+
+    // A/D: Move lateralmente (Strafe)
+    if (input.isKeyDown(LogicalKeyboardKey.keyA)) {
       cam.position.addScaled(right, speed);
     }
-    if (keys.contains(LogicalKeyboardKey.keyD)) {
+    if (input.isKeyDown(LogicalKeyboardKey.keyD)) {
       cam.position.addScaled(right, -speed);
     }
-    if (keys.contains(LogicalKeyboardKey.keyE)) {
+
+    // Q/E: Sobe e Desce absoluto (Elevador)
+    if (input.isKeyDown(LogicalKeyboardKey.keyE)) {
       cam.position.y += speed;
     }
-    if (keys.contains(LogicalKeyboardKey.keyQ)) {
+    if (input.isKeyDown(LogicalKeyboardKey.keyQ)) {
       cam.position.y -= speed;
     }
   }
 
-  void dispose() {}
+  void dispose() {
+    // Se necessário remover o listener do tick, faça aqui se a lib permitir
+  }
 }
