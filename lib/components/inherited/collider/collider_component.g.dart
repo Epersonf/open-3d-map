@@ -30,5 +30,4 @@ Map<String, dynamic> _$ColliderComponentToJson(ColliderComponent instance) =>
 const _$ColliderTypeEnumMap = {
   ColliderType.box: 'box',
   ColliderType.sphere: 'sphere',
-  ColliderType.mesh: 'mesh',
 };

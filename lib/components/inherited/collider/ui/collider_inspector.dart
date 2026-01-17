@@ -162,28 +162,6 @@ class _ColliderInspectorState extends State<ColliderInspector> {
                 update(radius: double.tryParse(val) ?? 0.5);
               }),
             ],
-
-            if (collider.type == ColliderType.mesh) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Text("Convex", style: TextStyle(color: Colors.white70)),
-                  const Spacer(),
-                  Switch(
-                    value: collider.convex,
-                    activeColor: Colors.blueAccent,
-                    onChanged: (v) => update(convex: v),
-                  ),
-                ],
-              ),
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
-                child: Text(
-                  "Uses the rendered mesh for collision.",
-                  style: TextStyle(color: Colors.white30, fontSize: 11, fontStyle: FontStyle.italic),
-                ),
-              )
-            ],
           ],
         ),
       );

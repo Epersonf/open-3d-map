@@ -151,8 +151,6 @@ class ColliderComponent extends GameComponent {
   // --- Visuals Logic ---
 
   void _createVisuals(three.Object3D parent) {
-    if (type == ColliderType.mesh) return; // Mesh collider não tem preview simples
-
     three.BufferGeometry? geometry;
 
     if (type == ColliderType.box) {
