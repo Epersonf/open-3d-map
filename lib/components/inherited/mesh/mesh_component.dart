@@ -4,7 +4,7 @@ import 'package:three_js/three_js.dart' as three;
 import '../../game_component.dart';
 import '../../../domain/scene/scene_context.dart';
 import '../../../domain/asset/asset.dart';
-import 'mesh_inspector.dart';
+import 'ui/mesh_inspector.dart';
 
 part 'mesh_component.g.dart';
 
@@ -20,6 +20,10 @@ class MeshComponent extends GameComponent {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   three.Object3D? _meshObject;
+
+  // --- CORREÇÃO 1: Flag de controle de ciclo de vida ---
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  bool _isDisposed = false;
 
   MeshComponent({this.assetId, this.visibleInRuntime = true});
 
@@ -42,6 +46,9 @@ class MeshComponent extends GameComponent {
 
   @override
   void onStart(dynamic owner) async {
+    _isDisposed = false; // Reset flag ao iniciar
+
+    // Se já temos o objeto (ex: vindo de um copyWith quente), apenas adiciona
     if (_meshObject != null) {
       if (_meshObject!.parent != owner.parent) {
         owner.parent.add(_meshObject!);
@@ -62,13 +69,25 @@ class MeshComponent extends GameComponent {
 
     if (asset.path.isEmpty) return;
 
+    // Carregamento Assíncrono
     final model =
         await owner.modelManager.loadModel(assetId!, rootPath, asset.path);
+
+    // --- CORREÇÃO 2: Verificar se fomos destruídos durante o await ---
+    if (_isDisposed) {
+      // Se fomos destruídos enquanto carregava, não adiciona nada à cena
+      // O ModelManager mantém o cache, então não há desperdício de memória no loader
+      return;
+    }
 
     if (model != null) {
       _meshObject = model.clone(true);
       _applyProperties();
-      owner.parent.add(_meshObject!);
+      
+      // Verificação dupla de segurança
+      if (!_isDisposed) {
+        owner.parent.add(_meshObject!);
+      }
     }
   }
 
@@ -94,6 +113,9 @@ class MeshComponent extends GameComponent {
 
   @override
   void onDestroy(SceneContext owner) {
+    // --- CORREÇÃO 3: Marcar como destruído imediatamente ---
+    _isDisposed = true;
+
     if (_meshObject != null) {
       _meshObject!.removeFromParent();
       _meshObject = null;
