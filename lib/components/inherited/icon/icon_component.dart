@@ -4,6 +4,7 @@ import 'package:three_js/three_js.dart' as three;
 import '../../game_component.dart';
 import '../../../domain/scene/scene_context.dart';
 import '../../../core/utils/icon_texture_generator.dart';
+import '../../../core/utils/flutter_icons_map.dart'; // Importe o mapa
 import 'icon_inspector.dart';
 
 part 'icon_component.g.dart';
@@ -43,13 +44,9 @@ class IconComponent extends GameComponent {
     
     owner.parent.userData[_genKey] = myGenId;
 
-    IconData iconData = Icons.help_outline;
-    switch (iconName) {
-      case 'light': iconData = Icons.lightbulb; break;
-      case 'camera': iconData = Icons.videocam; break;
-      case 'spawn': iconData = Icons.flag; break;
-      case 'enemy': iconData = Icons.bug_report; break;
-    }
+    // --- MUDANÇA: Busca dinâmica no mapa estático ---
+    final iconData = FlutterIconsMap.fromName(iconName);
+    // ------------------------------------------------
 
     final texture = await IconTextureGenerator.createTextureFromIcon(
       iconData,
