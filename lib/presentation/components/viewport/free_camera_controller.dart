@@ -8,7 +8,6 @@ class FreeCameraController {
 
   bool rightMouseDown = false;
 
-  // Configurações de velocidade
   double baseSpeed = 6.0;
   double runMultiplier = 2.5;
   double lookSpeed = 2.5;
@@ -18,12 +17,8 @@ class FreeCameraController {
   void initialize() {
     try {
       final cam = threeJs.camera;
-      // DEFINIÇÃO ÚNICA: Define a ordem YXZ (padrão para FPS/Editor).
-      // Isso garante que a rotação Y (olhar para lados) aconteça no eixo global,
-      // e a rotação X (olhar cima/baixo) aconteça no eixo local.
       cam.rotation.order = three.RotationOrders.yxz;
       
-      // Garante que começamos nivelados
       cam.rotation.z = 0;
       cam.up.setValues(0, 1, 0);
       cam.updateMatrix();
@@ -32,7 +27,6 @@ class FreeCameraController {
     threeJs.addAnimationEvent(_update);
   }
 
-  // --- Manipulação de Mouse ---
 
   void onPointerDown(PointerDownEvent e) {
     if (e.kind == PointerDeviceKind.mouse &&
@@ -53,7 +47,6 @@ class FreeCameraController {
     final cam = threeJs.camera;
 
     
-    // Rotação da Câmera (Mouse Look)
     cam.rotation.y -= e.delta.dx * 0.0025 * lookSpeed;
     cam.rotation.x -= e.delta.dy * 0.0025 * lookSpeed;
 
@@ -84,11 +77,9 @@ class FreeCameraController {
     cam.getWorldDirection(forward);
     forward.normalize();
 
-    // 2. Right (Vetor lateral, sempre paralelo ao chão para strafe confortável)
     final right = three.Vector3(0, 1, 0).cross(forward);
     right.normalize();
 
-    // --- MOVIMENTAÇÃO WASD ---
 
     if (input.isKeyDown(LogicalKeyboardKey.keyW)) {
       cam.position.addScaled(forward, speed);
@@ -114,6 +105,5 @@ class FreeCameraController {
   }
 
   void dispose() {
-    // Limpeza se necessário
   }
 }
