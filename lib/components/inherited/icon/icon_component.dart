@@ -21,6 +21,8 @@ class IconComponent extends GameComponent {
   final String iconName;
   // Nova propriedade de tamanho
   final double iconSize;
+  // 1. Nova propriedade de Cor (Armazenamos como int 0xRRGGBB para compatibilidade fácil)
+  final int color; 
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   three.Object3D? _sprite;
@@ -28,6 +30,7 @@ class IconComponent extends GameComponent {
   IconComponent({
     this.iconName = 'spawn',
     this.iconSize = 0.5, // Valor padrão
+    this.color = 0xFFFFFF,
   });
 
   factory IconComponent.fromJson(Map<String, dynamic> json) =>
@@ -37,10 +40,11 @@ class IconComponent extends GameComponent {
   Map<String, dynamic> toJson() => _$IconComponentToJson(this);
 
   @override
-  IconComponent copyWith({String? iconName, double? iconSize}) {
+  IconComponent copyWith({String? iconName, double? iconSize, int? color}) {
     return IconComponent(
       iconName: iconName ?? this.iconName,
       iconSize: iconSize ?? this.iconSize,
+      color: color ?? this.color,
     );
   }
 
@@ -69,7 +73,9 @@ class IconComponent extends GameComponent {
 
     final material = three.SpriteMaterial();
     material.map = texture;
-    material.color = three.Color.fromHex32(0xFFFFFF);
+    // 2. Aplica a cor inicial ao material (ThreeJS usa formato RGB inteiro)
+    // O '& 0xFFFFFF' garante que removemos o canal Alpha se vier do Flutter Color.value
+    material.color.setFromHex32(color & 0xFFFFFF);
     material.transparent = true;
     material.alphaTest = 0.5;
 
@@ -107,20 +113,23 @@ class IconComponent extends GameComponent {
         return true;
       }
 
-      // Se mudou só o tamanho, atualiza direto a escala (Performance)
-      if (oldComponent.iconSize != iconSize) {
-        _sprite = oldComponent._sprite;
-        if (_sprite != null) {
-          _sprite!.scale.setValues(iconSize, iconSize, iconSize);
-        } else {
-          onStart(owner);
-        }
-        return true;
-      }
-
-      // Se nada mudou, mantem referência
+      // Atualizações leves (Propriedades do Sprite)
       _sprite = oldComponent._sprite;
-      if (_sprite == null) onStart(owner);
+      
+      if (_sprite != null) {
+        // Atualiza Tamanho
+        if (oldComponent.iconSize != iconSize) {
+          _sprite!.scale.setValues(iconSize, iconSize, iconSize);
+        }
+        
+        // 3. Atualiza Cor em tempo real (Lerp visual instantâneo)
+        if (oldComponent.color != color) {
+          final mat = _sprite!.material as three.SpriteMaterial;
+          mat.color.setFromHex32(color & 0xFFFFFF);
+        }
+      } else {
+        onStart(owner);
+      }
       return true;
     }
     return false;

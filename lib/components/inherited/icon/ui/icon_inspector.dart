@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:open_3d_mapper/components/inherited/icon/ui/color_palette.dart';
 import '../../../../stores/selection_store.dart';
 import '../../../../stores/project_store.dart';
 import '../../../../core/utils/flutter_icons_map.dart';
@@ -17,16 +18,19 @@ class IconInspector extends StatelessWidget {
       final iconComp = sel.getComponent<IconComponent>();
       if (iconComp == null) return const SizedBox.shrink();
 
-      void update({String? name, double? size}) {
+      void update({String? name, double? size, int? color}) {
         final updated = sel.copyWithComponent(iconComp.copyWith(
           iconName: name,
           iconSize: size,
+          color: color,
         ));
         ProjectStore.instance.updateGameObject(updated);
         SelectionStore.instance.select(updated);
       }
 
       final currentIconData = FlutterIconsMap.fromName(iconComp.iconName);
+      // Converte int para Color do Flutter para a UI
+      final uiColor = Color(iconComp.color | 0xFF000000); 
 
       return Container(
         padding: const EdgeInsets.all(12),
@@ -52,7 +56,8 @@ class IconInspector extends StatelessWidget {
                     border: Border.all(color: Colors.blueAccent),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Icon(currentIconData, color: Colors.white, size: 24),
+                  // Aplica a cor selecionada no preview também
+                  child: Icon(currentIconData, color: uiColor, size: 24),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -76,7 +81,18 @@ class IconInspector extends StatelessWidget {
 
             const SizedBox(height: 16),
             const Divider(color: Colors.white10),
+            
+            // --- CONTROLE DE COR (Palette) ---
             const SizedBox(height: 8),
+            const Text("Tint Color", style: TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 8),
+            ColorPalette(
+              selectedColor: iconComp.color,
+              onColorChanged: (c) => update(color: c),
+            ),
+
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white10),
 
             // --- SLIDER DE TAMANHO ---
             Row(
