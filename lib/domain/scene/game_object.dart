@@ -46,8 +46,15 @@ class GameObject {
 
   /// Return a new GameObject with the given component replaced/added (immutable helper)
   GameObject copyWithComponent(GameComponent newComponent) {
-    final newComponents = components.where((c) => c.id != newComponent.id).toList();
-    newComponents.add(newComponent);
+    final newComponents = List<GameComponent>.from(components);
+    
+    final index = newComponents.indexWhere((c) => c.id == newComponent.id);
+
+    if (index != -1) {
+      newComponents[index] = newComponent;
+    } else {
+      newComponents.add(newComponent);
+    }
 
     return GameObject(
       id: id,
