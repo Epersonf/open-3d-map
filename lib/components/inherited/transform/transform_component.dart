@@ -6,6 +6,9 @@ import '../../../domain/scene/game_component.dart';
 import '../../../domain/scene/scene_context.dart';
 // Import do Gizmo Controller
 import 'package:open_3d_mapper/components/inherited/transform/gizmo/gizmo_controller.dart';
+import 'package:flutter/services.dart'; // For LogicalKeyboardKey
+import 'package:open_3d_mapper/stores/selection_store.dart';
+import 'package:three_js/three_js.dart' as three;
 
 part 'transform_component.g.dart';
 
@@ -64,6 +67,20 @@ class TransformComponent extends GameComponent {
   void onUpdate(SceneContext owner, double dt) {
     _applyTransform(owner);
     GizmoController.instance.update();
+
+    // --- Polling input for focus action (F) ---
+    try {
+      if (owner.input.isKeyDown(LogicalKeyboardKey.keyF)) {
+        final selected = SelectionStore.instance.selected;
+        // Recupera o ID deste objeto através do userData do Object3D pai
+        final myId = owner.parent.userData['gameObjectId'];
+
+        // Compara ID com ID (seguro contra recriação de instâncias no Store)
+        if (selected != null && selected.id == myId) {
+          _performFocus(owner);
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -95,5 +112,20 @@ class TransformComponent extends GameComponent {
   @override
   void onSelected(SceneContext owner) {
     GizmoController.instance.update();
+  }
+
+  void _performFocus(SceneContext owner) {
+    final camera = owner.camera;
+    final targetPos = three.Vector3(position.x, position.y, position.z);
+
+    const double distance = 5.0;
+    final offset = three.Vector3(0, 2, distance);
+
+    camera.position.setValues(
+      targetPos.x + offset.x,
+      targetPos.y + offset.y,
+      targetPos.z + offset.z,
+    );
+    camera.lookAt(targetPos);
   }
 }

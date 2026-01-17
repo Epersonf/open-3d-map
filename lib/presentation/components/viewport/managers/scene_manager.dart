@@ -173,6 +173,24 @@ class SceneManager {
     }
     _sceneObjects.clear();
   }
+
+  /// Método chamado a cada frame pelo Viewport (Game Loop)
+  void onUpdate(double dt) {
+    for (final sceneObject in _sceneObjects.values) {
+      if (sceneObject.object3d == null) continue;
+
+      final context = _createContext(sceneObject);
+
+      for (final component in sceneObject.gameObject.components) {
+        try {
+          component.onUpdate(context, dt);
+        } catch (e) {
+          // Falha em um componente não deve quebrar o loop de atualização
+          print('Erro no onUpdate do componente ${component.id}: $e');
+        }
+      }
+    }
+  }
   // --- Selection delegation ---
   // Track current selection so we can notify old/new components
   String? _currentSelectionId;
