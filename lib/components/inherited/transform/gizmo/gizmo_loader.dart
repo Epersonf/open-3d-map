@@ -4,7 +4,6 @@ import 'package:three_js/three_js.dart' as three;
 import '../../../../core/utils/model_import.dart';
 import 'gizmo_enums.dart';
 
-/// Classe simples para segurar os assets carregados de forma tipada
 class GizmoAssets {
   final three.Object3D? move;
   final three.Object3D? rotate;
@@ -33,7 +32,7 @@ class GizmoLoader {
         return clone;
       }
     } catch (e) {
-      print('Erro ao carregar gizmo $assetPath: $e');
+      // ignore
     }
     return null;
   }

@@ -4,27 +4,23 @@ import 'package:three_js/three_js.dart' as three;
 import '../../../../stores/selection_store.dart';
 import '../../../../stores/project_store.dart';
 import '../../../../stores/tool_store.dart';
-import '../gizmo/gizmo_loader.dart';
-import '../gizmo/gizmo_enums.dart';
-import '../gizmo/strategies/transform_strategy.dart';
-import '../gizmo/strategies/translate_strategy.dart';
-import '../gizmo/strategies/rotate_strategy.dart';
-import '../gizmo/strategies/scale_strategy.dart';
+import 'gizmo_loader.dart';
+import 'gizmo_enums.dart';
+import 'strategies/transform_strategy.dart';
+import 'strategies/translate_strategy.dart';
+import 'strategies/rotate_strategy.dart';
+import 'strategies/scale_strategy.dart';
 
 class GizmoController {
   final three.ThreeJS threeJs;
-  
-  // Assets
   GizmoAssets? _gizmoAssets;
   
-  // Mapa de estratégias: Conecta o Enum do Store com a Lógica correspondente
   final Map<GizmoMode, TransformStrategy> _strategies = {
     GizmoMode.translate: TranslateStrategy(),
     GizmoMode.rotate: RotateStrategy(),
     GizmoMode.scale: ScaleStrategy(),
   };
   
-  // Estado
   GizmoAxis? _activeAxis; 
   bool get isDragging => _activeAxis != null;
   double _lastMouseX = 0;
@@ -32,8 +28,6 @@ class GizmoController {
 
   final three.Raycaster _raycaster = three.Raycaster();
   final three.Vector2 _mouse = three.Vector2(0, 0);
-
-  // Listener para atualizar quando o modo ou espaço mudar
   late final VoidCallback _toolStoreListener;
 
   GizmoController(this.threeJs) {
@@ -41,15 +35,12 @@ class GizmoController {
     ToolStore.instance.addListener(_toolStoreListener);
   }
 
-  // Chamar dispose no Viewport para limpar o listener
   void dispose() {
     ToolStore.instance.removeListener(_toolStoreListener);
   }
 
-  /// Carrega todos os 3 gizmos
   Future<void> loadAllGizmos() async {
     _gizmoAssets = await GizmoLoader.loadGizmos();
-    
     if (_gizmoAssets!.move != null) threeJs.scene.add(_gizmoAssets!.move!);
     if (_gizmoAssets!.rotate != null) threeJs.scene.add(_gizmoAssets!.rotate!);
     if (_gizmoAssets!.scale != null) threeJs.scene.add(_gizmoAssets!.scale!);
@@ -58,37 +49,24 @@ class GizmoController {
   void update() {
     final selected = SelectionStore.instance.selected;
     if (selected == null) {
-      _gizmoAssets?.move?.visible = false;
-      _gizmoAssets?.rotate?.visible = false;
-      _gizmoAssets?.scale?.visible = false;
+      _hideAll();
       return;
     }
     var transform = selected.getComponent<TransformComponent>();
     if (transform == null) return;
     
-    _gizmoAssets?.move?.visible = false;
-    _gizmoAssets?.rotate?.visible = false;
-    _gizmoAssets?.scale?.visible = false;
-
+    _hideAll();
     if (_activeGizmoModel == null) return;
 
     final gizmo = _activeGizmoModel!;
     gizmo.visible = true;
 
-    gizmo.position.setValues(
-      transform.position.x,
-      transform.position.y,
-      transform.position.z,
-    );
+    gizmo.position.setValues(transform.position.x, transform.position.y, transform.position.z);
     
-    // --- LÓGICA DE ROTAÇÃO VISUAL DO GIZMO ---
     final space = ToolStore.instance.transformSpace;
-
-    // Antes estava forçando Scale a ser sempre local. Agora respeitamos o toggle.
     bool shouldRotateGizmo = space == TransformSpace.local;
 
     if (shouldRotateGizmo) {
-      // Copia a rotação do objeto (converter graus -> rad)
       gizmo.rotation.set(
         transform.rotation.x * (3.14159 / 180),
         transform.rotation.y * (3.14159 / 180),
@@ -103,15 +81,18 @@ class GizmoController {
     gizmo.scale.setValues(scale, scale, scale);
   }
 
+  void _hideAll() {
+    _gizmoAssets?.move?.visible = false;
+    _gizmoAssets?.rotate?.visible = false;
+    _gizmoAssets?.scale?.visible = false;
+  }
+
   three.Object3D? get _activeGizmoModel {
     if (_gizmoAssets == null) return null;
     switch (ToolStore.instance.activeMode) {
-      case GizmoMode.translate:
-        return _gizmoAssets!.move;
-      case GizmoMode.rotate:
-        return _gizmoAssets!.rotate;
-      case GizmoMode.scale:
-        return _gizmoAssets!.scale;
+      case GizmoMode.translate: return _gizmoAssets!.move;
+      case GizmoMode.rotate: return _gizmoAssets!.rotate;
+      case GizmoMode.scale: return _gizmoAssets!.scale;
     }
   }
 
@@ -126,8 +107,6 @@ class GizmoController {
 
     if (intersects.isNotEmpty) {
       final object = intersects.first.object;
-      
-      // Recuperar o Enum do userData (tipado)
       if (object?.userData['gizmoAxis'] is GizmoAxis) {
         _activeAxis = object?.userData['gizmoAxis'] as GizmoAxis;
         _lastMouseX = event.localPosition.dx;
@@ -152,7 +131,6 @@ class GizmoController {
 
      if (strategy != null) {
        final delta = strategy.calculateDelta(_activeAxis!, dx, dy);
-
        final updatedObject = strategy.apply(
          SelectionStore.instance.selected!,
          _activeAxis!,
@@ -162,7 +140,6 @@ class GizmoController {
 
        ProjectStore.instance.updateGameObject(updatedObject);
        SelectionStore.instance.select(updatedObject);
-       
        update();
      }
   }

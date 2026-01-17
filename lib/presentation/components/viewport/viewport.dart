@@ -11,7 +11,8 @@ import '../../../stores/tool_store.dart';
 import '../../../stores/camera_store.dart'; // Camera focus bridge
 import '../../../domain/scene/game_object.dart';
 import 'controllers/selection_controller.dart';
-import 'controllers/gizmo_controller.dart';
+// ATENÇÃO: Gizmo movido para o componente de Transform
+import 'package:open_3d_mapper/components/inherited/transform/gizmo/gizmo_controller.dart';
 import 'managers/scene_manager.dart';
 import 'managers/model_manager.dart';
 
