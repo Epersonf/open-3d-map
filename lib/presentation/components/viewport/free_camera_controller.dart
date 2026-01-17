@@ -7,7 +7,7 @@ class FreeCameraController {
   final three.ThreeJS threeJs;
 
   bool rightMouseDown = false;
-  
+
   // Configurações de velocidade
   double baseSpeed = 6.0;
   double runMultiplier = 2.5;
@@ -25,7 +25,7 @@ class FreeCameraController {
   }
 
   // --- Manipulação de Mouse ---
-  // Esses métodos devem ser chamados pelo seu Widget/Viewport 
+  // Esses métodos devem ser chamados pelo seu Widget/Viewport
   // quando o InputManager não consumir o evento (ex: Gizmo não clicado)
 
   void onPointerDown(PointerDownEvent e) {
@@ -57,7 +57,7 @@ class FreeCameraController {
     cam.rotation.y -= e.delta.dx * 0.0025 * lookSpeed;
     cam.rotation.x -= e.delta.dy * 0.0025 * lookSpeed;
 
-    const double maxPitch = 1.50; 
+    const double maxPitch = 1.50;
     if (cam.rotation.x > maxPitch) cam.rotation.x = maxPitch;
     if (cam.rotation.x < -maxPitch) cam.rotation.x = -maxPitch;
 
@@ -86,18 +86,18 @@ class FreeCameraController {
     // 1. Forward (Para onde a câmera aponta em 3D)
     final forward = three.Vector3.zero();
     cam.getWorldDirection(forward);
-    forward.normalize(); 
-    // REMOVIDO: forward.y = 0; -> Isso permitia andar apenas no chão. 
+    forward.normalize();
+    // REMOVIDO: forward.y = 0; -> Isso permitia andar apenas no chão.
     // Agora 'forward' aponta exatamente para onde você olha.
 
     // 2. Right (Vetor lateral, sempre paralelo ao chão para strafe confortável)
-    // Para o strafe (A/D), geralmente queremos manter o movimento horizontal 
+    // Para o strafe (A/D), geralmente queremos manter o movimento horizontal
     // para não "afundar" no chão ao andar de lado olhando para baixo.
-    final right = three.Vector3(0, 1, 0).cross(forward); 
+    final right = three.Vector3(0, 1, 0).cross(forward);
     right.normalize();
 
     // --- MOVIMENTAÇÃO WASD ---
-    
+
     // W/S: Move na direção do olhar (sobe se olhar pra cima, desce se olhar pra baixo)
     if (input.isKeyDown(LogicalKeyboardKey.keyW)) {
       cam.position.addScaled(forward, speed);

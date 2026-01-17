@@ -39,9 +39,11 @@ class GizmoLoader {
 
   static Future<File> _assetToTempFile(String assetPath) async {
     final data = await rootBundle.load(assetPath);
-    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    final bytes =
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     final tmpDir = Directory.systemTemp;
-    final file = File('${tmpDir.path}/${assetPath.split('/').last.replaceAll('.fbx', '')}_${DateTime.now().millisecondsSinceEpoch}.fbx');
+    final file = File(
+        '${tmpDir.path}/${assetPath.split('/').last.replaceAll('.fbx', '')}_${DateTime.now().millisecondsSinceEpoch}.fbx');
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
@@ -50,7 +52,7 @@ class GizmoLoader {
     model.traverse((child) {
       if (child is three.Mesh) {
         child.renderOrder = 999;
-        
+
         final n = (child.name).toLowerCase();
         GizmoAxis? axis;
         three.Color color = three.Color.fromHex32(0xFFFFFF);
@@ -58,17 +60,21 @@ class GizmoLoader {
         if (n.contains('arrow1') || n.contains('y') || n.contains('green')) {
           axis = GizmoAxis.y;
           color = three.Color.fromHex32(0x00FF00);
-        } else if (n.contains('arrow2') || n.contains('x') || n.contains('red')) {
+        } else if (n.contains('arrow2') ||
+            n.contains('x') ||
+            n.contains('red')) {
           axis = GizmoAxis.x;
           color = three.Color.fromHex32(0xFF0000);
-        } else if (n.contains('arrow3') || n.contains('z') || n.contains('blue')) {
+        } else if (n.contains('arrow3') ||
+            n.contains('z') ||
+            n.contains('blue')) {
           axis = GizmoAxis.z;
           color = three.Color.fromHex32(0x0000FF);
         }
 
         if (axis != null) {
           child.userData['gizmoAxis'] = axis;
-          
+
           final mat = three.MeshBasicMaterial();
           mat.color = color;
           child.material = mat;

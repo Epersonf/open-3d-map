@@ -27,16 +27,17 @@ class SelectionController {
   void _updateMousePosition(PointerMoveEvent event, BuildContext context) {
     final RenderBox? box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
-    
+
     final offset = box.globalToLocal(event.position);
     // CORREÇÃO: Passamos o tamanho do box explicitamente
     _updateMouseCoordinates(offset, box.size);
   }
 
-  void _updateMousePositionFromTap(TapDownDetails details, BuildContext context) {
+  void _updateMousePositionFromTap(
+      TapDownDetails details, BuildContext context) {
     final RenderBox? box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
-    
+
     final offset = box.globalToLocal(details.globalPosition);
     // CORREÇÃO: Passamos o tamanho do box explicitamente
     _updateMouseCoordinates(offset, box.size);
@@ -81,8 +82,9 @@ class SelectionController {
 
   void _handleIntersection(three.Object3D clickedObject) {
     var currentObject = clickedObject;
-    
-    while (currentObject.userData['gameObjectId'] == null && currentObject.parent != null) {
+
+    while (currentObject.userData['gameObjectId'] == null &&
+        currentObject.parent != null) {
       currentObject = currentObject.parent!;
     }
 
@@ -95,7 +97,7 @@ class SelectionController {
         return;
       }
     }
-    
+
     _handleNoIntersection();
   }
 

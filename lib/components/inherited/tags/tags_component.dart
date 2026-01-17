@@ -17,7 +17,8 @@ class TagsComponent extends GameComponent {
 
   TagsComponent({Map<String, String>? tags}) : tags = tags ?? {};
 
-  factory TagsComponent.fromJson(Map<String, dynamic> json) => _$TagsComponentFromJson(json);
+  factory TagsComponent.fromJson(Map<String, dynamic> json) =>
+      _$TagsComponentFromJson(json);
 
   @override
   Map<String, dynamic> toJson() => _$TagsComponentToJson(this);

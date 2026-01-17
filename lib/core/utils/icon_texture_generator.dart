@@ -43,8 +43,10 @@ class IconTextureGenerator {
     textPainter.paint(canvas, offset);
 
     // 4. Gerar a imagem
-    final ui.Image image = await pictureRecorder.endRecording().toImage(size, size);
-    final varByteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    final ui.Image image =
+        await pictureRecorder.endRecording().toImage(size, size);
+    final varByteData =
+        await image.toByteData(format: ui.ImageByteFormat.rawRgba);
 
     if (varByteData == null) {
       throw Exception('Falha ao gerar textura do ícone');

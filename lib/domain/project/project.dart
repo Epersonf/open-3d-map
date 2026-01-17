@@ -12,10 +12,17 @@ class Project {
   final List<Asset> assets;
   final List<Scene> scenes;
 
-  Project({required this.version, required this.name, required this.assetsFolder, required this.assets, required this.scenes});
+  Project(
+      {required this.version,
+      required this.name,
+      required this.assetsFolder,
+      required this.assets,
+      required this.scenes});
 
-  factory Project.fromJson(Map<String, dynamic> json) => _$ProjectFromJson(json);
+  factory Project.fromJson(Map<String, dynamic> json) =>
+      _$ProjectFromJson(json);
   Map<String, dynamic> toJson() => _$ProjectToJson(this);
 
-  static Project createNew(String name) => Project(version: 1, name: name, assetsFolder: 'assets', assets: [], scenes: []);
+  static Project createNew(String name) => Project(
+      version: 1, name: name, assetsFolder: 'assets', assets: [], scenes: []);
 }

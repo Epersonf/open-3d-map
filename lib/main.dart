@@ -55,10 +55,14 @@ class HomePage extends StatelessWidget {
                               child: AnimatedBuilder(
                                 animation: ProjectStore.instance,
                                 builder: (ctx, _) {
-                                  if (ProjectStore.instance.projectPath != null) {
+                                  if (ProjectStore.instance.projectPath !=
+                                      null) {
                                     return const Viewport3D();
                                   }
-                                  return const Center(child: Text('No project opened', style: TextStyle(color: Colors.white54)));
+                                  return const Center(
+                                      child: Text('No project opened',
+                                          style: TextStyle(
+                                              color: Colors.white54)));
                                 },
                               ),
                             ),
@@ -69,7 +73,9 @@ class HomePage extends StatelessWidget {
                                 if (ProjectStore.instance.projectPath != null) {
                                   return Padding(
                                     padding: const EdgeInsets.only(left: 8.0),
-                                    child: SizedBox(width: 300, child: const HierarchyPanel()),
+                                    child: SizedBox(
+                                        width: 300,
+                                        child: const HierarchyPanel()),
                                   );
                                 }
                                 return const SizedBox.shrink();
@@ -79,12 +85,16 @@ class HomePage extends StatelessWidget {
                             AnimatedBuilder(
                               animation: ProjectStore.instance,
                               builder: (ctx, _) {
-                                if (ProjectStore.instance.projectPath == null) return const SizedBox.shrink();
+                                if (ProjectStore.instance.projectPath == null)
+                                  return const SizedBox.shrink();
                                 return Padding(
                                   padding: const EdgeInsets.only(left: 8.0),
                                   child: Observer(builder: (_) {
-                                    if (SelectionStore.instance.selected == null) return const SizedBox.shrink();
-                                    return SizedBox(width: 320, child: const InspectorPanel());
+                                    if (SelectionStore.instance.selected ==
+                                        null) return const SizedBox.shrink();
+                                    return SizedBox(
+                                        width: 320,
+                                        child: const InspectorPanel());
                                   }),
                                 );
                               },

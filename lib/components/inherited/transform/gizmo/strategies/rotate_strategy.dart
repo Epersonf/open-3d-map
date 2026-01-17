@@ -11,19 +11,27 @@ class RotateStrategy implements TransformStrategy {
   double calculateDelta(GizmoAxis axis, double dx, double dy) {
     const rotateSpeed = 0.8;
     switch (axis) {
-      case GizmoAxis.x: return dy * rotateSpeed;
-      case GizmoAxis.y: return dx * rotateSpeed;
-      case GizmoAxis.z: return -dx * rotateSpeed;
+      case GizmoAxis.x:
+        return dy * rotateSpeed;
+      case GizmoAxis.y:
+        return dx * rotateSpeed;
+      case GizmoAxis.z:
+        return -dx * rotateSpeed;
     }
   }
 
   @override
-  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space, three.Object3D? object3d) {
+  GameObject apply(GameObject original, GizmoAxis axis, double delta,
+      TransformSpace space, three.Object3D? object3d) {
     var transform = original.getComponent<TransformComponent>();
     if (transform == null) return original;
 
     final rad = 3.14159265359 / 180;
-    final currentEuler = three.Euler(transform.rotation.x * rad, transform.rotation.y * rad, transform.rotation.z * rad, three.RotationOrders.xyz);
+    final currentEuler = three.Euler(
+        transform.rotation.x * rad,
+        transform.rotation.y * rad,
+        transform.rotation.z * rad,
+        three.RotationOrders.xyz);
     final currentQuat = three.Quaternion().setFromEuler(currentEuler);
 
     final deltaRad = delta * rad;
@@ -31,9 +39,15 @@ class RotateStrategy implements TransformStrategy {
     three.Vector3 axisVector;
 
     switch (axis) {
-      case GizmoAxis.x: axisVector = three.Vector3(1, 0, 0); break;
-      case GizmoAxis.y: axisVector = three.Vector3(0, 1, 0); break;
-      case GizmoAxis.z: axisVector = three.Vector3(0, 0, 1); break;
+      case GizmoAxis.x:
+        axisVector = three.Vector3(1, 0, 0);
+        break;
+      case GizmoAxis.y:
+        axisVector = three.Vector3(0, 1, 0);
+        break;
+      case GizmoAxis.z:
+        axisVector = three.Vector3(0, 0, 1);
+        break;
     }
 
     deltaQuat.setFromAxisAngle(axisVector, deltaRad);
@@ -48,25 +62,26 @@ class RotateStrategy implements TransformStrategy {
       // q_world = q_parent * q_local
       // q_world_new = q_delta_world * q_world
       // q_local_new = inv(q_parent) * q_world_new
-      
+
       if (object3d != null && object3d.parent != null) {
-         final parentQuat = three.Quaternion();
-         object3d.parent!.getWorldQuaternion(parentQuat);
-         
-         // Convertemos o delta global para delta relativo ao pai
-         final invParent = parentQuat.clone()..invert();
-         // Transforma o eixo de rotação global para o espaço do pai
-         axisVector.applyQuaternion(invParent);
-         deltaQuat.setFromAxisAngle(axisVector, deltaRad);
-         
-         // Aplica à rotação local (que é relativa ao pai)
-         currentQuat.premultiply(deltaQuat);
+        final parentQuat = three.Quaternion();
+        object3d.parent!.getWorldQuaternion(parentQuat);
+
+        // Convertemos o delta global para delta relativo ao pai
+        final invParent = parentQuat.clone()..invert();
+        // Transforma o eixo de rotação global para o espaço do pai
+        axisVector.applyQuaternion(invParent);
+        deltaQuat.setFromAxisAngle(axisVector, deltaRad);
+
+        // Aplica à rotação local (que é relativa ao pai)
+        currentQuat.premultiply(deltaQuat);
       } else {
-         currentQuat.premultiply(deltaQuat);
+        currentQuat.premultiply(deltaQuat);
       }
     }
 
-    final newEuler = three.Euler().setFromQuaternion(currentQuat, three.RotationOrders.xyz);
+    final newEuler =
+        three.Euler().setFromQuaternion(currentQuat, three.RotationOrders.xyz);
 
     return original.copyWithComponent(transform.copyWith(
       rotation: Vec3(

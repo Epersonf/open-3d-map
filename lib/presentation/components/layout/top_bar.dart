@@ -15,7 +15,8 @@ class TopBar extends StatelessWidget {
     try {
       if (value == 'save') {
         if (ProjectStore.instance.project == null) {
-          messenger.showSnackBar(const SnackBar(content: Text('No project to save')));
+          messenger.showSnackBar(
+              const SnackBar(content: Text('No project to save')));
           return;
         }
         await ProjectStore.instance.saveProject();
@@ -31,7 +32,8 @@ class TopBar extends StatelessWidget {
         );
 
         if (result == null || result.files.isEmpty) {
-          messenger.showSnackBar(const SnackBar(content: Text('Open cancelled')));
+          messenger
+              .showSnackBar(const SnackBar(content: Text('Open cancelled')));
           return;
         }
 
@@ -42,7 +44,8 @@ class TopBar extends StatelessWidget {
         final projectRoot = p.dirname(filePath);
 
         if (!await file.exists()) {
-          messenger.showSnackBar(SnackBar(content: Text('File not found: $filePath')));
+          messenger.showSnackBar(
+              SnackBar(content: Text('File not found: $filePath')));
           return;
         }
 
@@ -50,15 +53,18 @@ class TopBar extends StatelessWidget {
         try {
           final json = jsonDecode(content) as Map<String, dynamic>;
           final project = Project.fromJson(json);
-          messenger.showSnackBar(SnackBar(content: Text('Project opened: ${project.name}')));
+          messenger.showSnackBar(
+              SnackBar(content: Text('Project opened: ${project.name}')));
 
           // Pass both the inferred directory and the filename to the store
-          ProjectStore.instance.setProject(project, projectRoot, fileName: fileName);
+          ProjectStore.instance
+              .setProject(project, projectRoot, fileName: fileName);
 
           // ignore: avoid_print
           print('Opened project at $projectRoot (file: $fileName)');
         } catch (e) {
-          messenger.showSnackBar(SnackBar(content: Text('Invalid project file: $e')));
+          messenger.showSnackBar(
+              SnackBar(content: Text('Invalid project file: $e')));
         }
         return;
       }
@@ -66,14 +72,17 @@ class TopBar extends StatelessWidget {
       if (value == 'new') {
         final name = await _askForProjectName(context);
         if (name == null || name.trim().isEmpty) {
-          messenger.showSnackBar(const SnackBar(content: Text('Project creation cancelled')));
+          messenger.showSnackBar(
+              const SnackBar(content: Text('Project creation cancelled')));
           return;
         }
 
         // Choose parent folder for the project
-        final parentPath = await FilePicker.platform.getDirectoryPath(dialogTitle: 'Select Parent Folder for New Project');
+        final parentPath = await FilePicker.platform.getDirectoryPath(
+            dialogTitle: 'Select Parent Folder for New Project');
         if (parentPath == null) {
-          messenger.showSnackBar(const SnackBar(content: Text('No folder selected')));
+          messenger.showSnackBar(
+              const SnackBar(content: Text('No folder selected')));
           return;
         }
 
@@ -90,18 +99,22 @@ class TopBar extends StatelessWidget {
         // Use .o3m as default project filename
         const defaultFileName = 'project.o3m';
         final projectFile = File(p.join(projectDir.path, defaultFileName));
-        await projectFile.writeAsString(const JsonEncoder.withIndent('  ').convert(project.toJson()));
+        await projectFile.writeAsString(
+            const JsonEncoder.withIndent('  ').convert(project.toJson()));
 
-        ProjectStore.instance.setProject(project, projectDir.path, fileName: defaultFileName);
+        ProjectStore.instance
+            .setProject(project, projectDir.path, fileName: defaultFileName);
 
-        messenger.showSnackBar(SnackBar(content: Text('Project created at ${projectDir.path}')));
+        messenger.showSnackBar(
+            SnackBar(content: Text('Project created at ${projectDir.path}')));
         // ignore: avoid_print
         print('Created project at ${projectDir.path}');
         return;
       }
 
       if (value == 'export') {
-        messenger.showSnackBar(const SnackBar(content: Text('Export project (stub)')));
+        messenger.showSnackBar(
+            const SnackBar(content: Text('Export project (stub)')));
         return;
       }
     } catch (e) {
@@ -122,8 +135,12 @@ class TopBar extends StatelessWidget {
             autofocus: true,
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.of(ctx).pop(controller.text.trim()), child: const Text('Create')),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(null),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+                child: const Text('Create')),
           ],
         );
       },
@@ -139,14 +156,19 @@ class TopBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1B1B1B),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.6),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
         children: [
           Row(
             children: [
-              Image.asset('assets/logo.png', height: 32, errorBuilder: (ctx, err, st) => const SizedBox.shrink()),
+              Image.asset('assets/logo.png',
+                  height: 32,
+                  errorBuilder: (ctx, err, st) => const SizedBox.shrink()),
             ],
           ),
           const SizedBox(width: 20),

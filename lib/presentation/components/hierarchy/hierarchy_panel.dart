@@ -44,7 +44,7 @@ class HierarchyPanel extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // --- Lista de Objetos ---
           Expanded(
             child: DragTarget<String>(
@@ -58,19 +58,25 @@ class HierarchyPanel extends StatelessWidget {
                   animation: ProjectStore.instance,
                   builder: (context, _) {
                     final project = ProjectStore.instance.project;
-                    
+
                     if (project == null || project.scenes.isEmpty) {
-                      return const Center(child: Text("No Scene", style: TextStyle(color: Colors.white24)));
+                      return const Center(
+                          child: Text("No Scene",
+                              style: TextStyle(color: Colors.white24)));
                     }
 
                     final scene = project.scenes.first;
-                    
+
                     return Observer(
                       builder: (_) {
-                        final roots = scene.objects.where((obj) => obj.parentId == null).toList();
+                        final roots = scene.objects
+                            .where((obj) => obj.parentId == null)
+                            .toList();
 
                         if (roots.isEmpty) {
-                           return const Center(child: Text("Scene Empty", style: TextStyle(color: Colors.white24)));
+                          return const Center(
+                              child: Text("Scene Empty",
+                                  style: TextStyle(color: Colors.white24)));
                         }
 
                         return ListView.builder(
@@ -78,10 +84,11 @@ class HierarchyPanel extends StatelessWidget {
                           itemBuilder: (context, index) {
                             final node = roots[index];
                             return HierarchyNode(
-                              key: ValueKey(node.id), 
+                              key: ValueKey(node.id),
                               node: node,
                               onReparent: ProjectStore.instance.reparentObject,
-                              onCreateEmpty: (pid) => ProjectStore.instance.createEmpty(parentId: pid),
+                              onCreateEmpty: (pid) => ProjectStore.instance
+                                  .createEmpty(parentId: pid),
                               level: 0,
                             );
                           },

@@ -46,7 +46,8 @@ class _TransformInspectorState extends State<TransformInspector> {
 
   void _applyTransform() {
     final sel = SelectionStore.instance.selected;
-    if (sel == null) return; // Removida verificação de _currentObject para evitar stale state
+    if (sel == null)
+      return; // Removida verificação de _currentObject para evitar stale state
 
     final newTransform = TransformComponent(
       position: Vec3(
@@ -80,7 +81,7 @@ class _TransformInspectorState extends State<TransformInspector> {
   void _updateControllerIfNeeded(TextEditingController ctrl, double value) {
     // 1. Pega o valor atual que está no texto
     double? currentTextVal = double.tryParse(ctrl.text);
-    
+
     // 2. Se for nulo ou a diferença for significativa, atualiza
     // Usamos um pequeno epsilon para evitar 'flickering' de floating point
     if (currentTextVal == null || (currentTextVal - value).abs() > 0.001) {
@@ -91,7 +92,8 @@ class _TransformInspectorState extends State<TransformInspector> {
     }
   }
 
-  Widget _tripleField(String label, TextEditingController a, TextEditingController b, TextEditingController c) {
+  Widget _tripleField(String label, TextEditingController a,
+      TextEditingController b, TextEditingController c) {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -123,8 +125,10 @@ class _TransformInspectorState extends State<TransformInspector> {
         labelStyle: const TextStyle(color: Colors.white54),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         border: const OutlineInputBorder(),
-        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+        enabledBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white24)),
+        focusedBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.blue)),
         filled: true,
         fillColor: const Color(0xFF1E1E1E),
       ),
@@ -146,7 +150,6 @@ class _TransformInspectorState extends State<TransformInspector> {
         );
       }
 
-    
       var transformComp = sel.getComponent<TransformComponent>();
       if (transformComp == null) {
         return Container(

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 enum GizmoMode { translate, rotate, scale }
+
 enum TransformSpace { global, local }
 
 class ToolStore extends ChangeNotifier {

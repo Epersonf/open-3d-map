@@ -60,7 +60,7 @@ class _TagsInspectorState extends State<TagsInspector> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 8),
-            
+
             // Current tags section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -79,9 +79,9 @@ class _TagsInspectorState extends State<TagsInspector> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             // Tags list
             if (_tags.isEmpty)
               Container(
@@ -117,11 +117,14 @@ class _TagsInspectorState extends State<TagsInspector> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit, size: 18, color: Colors.blueAccent),
-                            onPressed: () => _openTagModal(context, tag: tag, index: idx),
+                            icon: const Icon(Icons.edit,
+                                size: 18, color: Colors.blueAccent),
+                            onPressed: () =>
+                                _openTagModal(context, tag: tag, index: idx),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete, size: 18, color: Colors.redAccent),
+                            icon: const Icon(Icons.delete,
+                                size: 18, color: Colors.redAccent),
                             onPressed: () => _removeTag(idx),
                           ),
                         ],
@@ -138,7 +141,8 @@ class _TagsInspectorState extends State<TagsInspector> {
     });
   }
 
-  Future<void> _openTagModal(BuildContext context, {Tag? tag, int? index}) async {
+  Future<void> _openTagModal(BuildContext context,
+      {Tag? tag, int? index}) async {
     final result = await showTagModal(context, tag: tag);
     if (result != null) {
       setState(() {
@@ -158,7 +162,8 @@ class _TagsInspectorState extends State<TagsInspector> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('Delete Tag', style: TextStyle(color: Colors.white)),
+          title:
+              const Text('Delete Tag', style: TextStyle(color: Colors.white)),
           content: Text(
             'Are you sure you want to delete tag "${_tags[idx].key}"?',
             style: const TextStyle(color: Colors.white70),
@@ -166,7 +171,8 @@ class _TagsInspectorState extends State<TagsInspector> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white70)),
             ),
             ElevatedButton(
               onPressed: () {

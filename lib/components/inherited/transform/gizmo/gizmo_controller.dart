@@ -28,7 +28,7 @@ class GizmoController {
   three.Scene? _scene;
   three.Camera? _camera;
   GizmoAssets? _gizmoAssets;
-  
+
   // Referência ao objeto 3D real da cena para cálculos de mundo
   three.Object3D? _currentObject3D;
 
@@ -40,10 +40,10 @@ class GizmoController {
     GizmoMode.rotate: RotateStrategy(),
     GizmoMode.scale: ScaleStrategy(),
   };
-  
-  GizmoAxis? _activeAxis; 
+
+  GizmoAxis? _activeAxis;
   bool get isDragging => _activeAxis != null;
-  
+
   double _lastMouseX = 0;
   double _lastMouseY = 0;
 
@@ -54,7 +54,7 @@ class GizmoController {
   void setup(three.Scene scene, three.Camera camera) {
     _scene = scene;
     _camera = camera;
-    
+
     if (!_initialized) {
       _loadAllGizmos();
       _initialized = true;
@@ -88,13 +88,13 @@ class GizmoController {
       _hideAll();
       return;
     }
-    
+
     var transform = selected.getComponent<TransformComponent>();
     if (transform == null) {
-        _hideAll();
-        return;
+      _hideAll();
+      return;
     }
-    
+
     _hideAll();
     if (_activeGizmoModel == null) return;
 
@@ -103,18 +103,18 @@ class GizmoController {
 
     // [FIX] USAR WORLD POSITION
     // Em vez de usar transform.position (Local), pegamos a posição do mundo do Object3D
-        if (_currentObject3D != null) {
+    if (_currentObject3D != null) {
       final worldPos = three.Vector3();
       _currentObject3D!.getWorldPosition(worldPos);
       gizmo.position.setValues(worldPos.x, worldPos.y, worldPos.z);
-      
+
       // [FIX] Rotação do Gizmo
       final space = ToolStore.instance.transformSpace;
       if (space == TransformSpace.local) {
         // Se for Local, o gizmo deve acompanhar a rotação de mundo do objeto
         final worldQuat = three.Quaternion();
         _currentObject3D!.getWorldQuaternion(worldQuat);
-        
+
         gizmo.quaternion.x = worldQuat.x;
         gizmo.quaternion.y = worldQuat.y;
         gizmo.quaternion.z = worldQuat.z;
@@ -125,7 +125,8 @@ class GizmoController {
       }
     } else {
       // Fallback para comportamento antigo se algo der errado
-      gizmo.position.setValues(transform.position.x, transform.position.y, transform.position.z);
+      gizmo.position.setValues(
+          transform.position.x, transform.position.y, transform.position.z);
     }
 
     final distance = _camera!.position.distanceTo(gizmo.position);
@@ -142,9 +143,12 @@ class GizmoController {
   three.Object3D? get _activeGizmoModel {
     if (_gizmoAssets == null) return null;
     switch (ToolStore.instance.activeMode) {
-      case GizmoMode.translate: return _gizmoAssets!.move;
-      case GizmoMode.rotate: return _gizmoAssets!.rotate;
-      case GizmoMode.scale: return _gizmoAssets!.scale;
+      case GizmoMode.translate:
+        return _gizmoAssets!.move;
+      case GizmoMode.rotate:
+        return _gizmoAssets!.rotate;
+      case GizmoMode.scale:
+        return _gizmoAssets!.scale;
     }
   }
 
@@ -152,7 +156,7 @@ class GizmoController {
 
   bool _onPointerDown(PointerDownEvent event, Size viewportSize) {
     if (_camera == null) return false;
-    
+
     final gizmo = _activeGizmoModel;
     if (gizmo == null || !gizmo.visible) return false;
 
@@ -174,18 +178,18 @@ class GizmoController {
   }
 
   void _onPointerMove(PointerMoveEvent event) {
-     if (_activeAxis == null || SelectionStore.instance.selected == null) return;
+    if (_activeAxis == null || SelectionStore.instance.selected == null) return;
 
-     final dx = event.position.dx - _lastMouseX;
-     final dy = event.position.dy - _lastMouseY;
-     _lastMouseX = event.position.dx;
-     _lastMouseY = event.position.dy;
+    final dx = event.position.dx - _lastMouseX;
+    final dy = event.position.dy - _lastMouseY;
+    _lastMouseX = event.position.dx;
+    _lastMouseY = event.position.dy;
 
-     final mode = ToolStore.instance.activeMode;
-     final space = ToolStore.instance.transformSpace;
-     final strategy = _strategies[mode];
+    final mode = ToolStore.instance.activeMode;
+    final space = ToolStore.instance.transformSpace;
+    final strategy = _strategies[mode];
 
-     if (strategy != null) {
+    if (strategy != null) {
       final delta = strategy.calculateDelta(_activeAxis!, dx, dy);
       final updatedObject = strategy.apply(
         SelectionStore.instance.selected!,
@@ -195,10 +199,10 @@ class GizmoController {
         _currentObject3D, // [FIX] Passamos o objeto 3D para cálculo de matrizes
       );
 
-       ProjectStore.instance.updateGameObject(updatedObject);
-       SelectionStore.instance.select(updatedObject);
-       update();
-     }
+      ProjectStore.instance.updateGameObject(updatedObject);
+      SelectionStore.instance.select(updatedObject);
+      update();
+    }
   }
 
   void _onPointerUp() {

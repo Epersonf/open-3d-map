@@ -38,7 +38,8 @@ class SceneUtils {
   }
 
   /// Encontra o caminho para um GameObject na hierarquia
-  static List<GameObject> findPathToGameObject(GameObject root, String targetId) {
+  static List<GameObject> findPathToGameObject(
+      GameObject root, String targetId) {
     final path = <GameObject>[];
 
     bool _findPath(GameObject current, List<GameObject> currentPath) {

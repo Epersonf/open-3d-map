@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-Future<String?> showRenameModal(BuildContext context, {required String currentName}) {
+Future<String?> showRenameModal(BuildContext context,
+    {required String currentName}) {
   final controller = TextEditingController(text: currentName);
   return showDialog<String>(
     context: context,
     builder: (context) {
       return AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Rename Object', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Rename Object', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -15,14 +17,17 @@ Future<String?> showRenameModal(BuildContext context, {required String currentNa
           decoration: const InputDecoration(
             hintText: 'Enter new name',
             hintStyle: TextStyle(color: Colors.white54),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white30)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.blue)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
             onPressed: () {

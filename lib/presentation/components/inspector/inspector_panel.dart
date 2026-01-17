@@ -15,10 +15,10 @@ class InspectorPanel extends StatefulWidget {
 }
 
 class _InspectorPanelState extends State<InspectorPanel> {
-
   void _removeComponent(GameObject obj, String componentId) {
-    final newComponents = obj.components.where((c) => c.id != componentId).toList();
-    
+    final newComponents =
+        obj.components.where((c) => c.id != componentId).toList();
+
     // Cria novo objeto com lista atualizada
     final updated = GameObject(
       id: obj.id,
@@ -37,7 +37,7 @@ class _InspectorPanelState extends State<InspectorPanel> {
     if (sel == null) return;
 
     final existingIds = sel.components.map((c) => c.id).toList();
-    
+
     final newTypeId = await showAddComponentModal(context, existingIds);
     if (newTypeId == null) return;
 
@@ -67,12 +67,13 @@ class _InspectorPanelState extends State<InspectorPanel> {
       child: SingleChildScrollView(
         child: Observer(builder: (_) {
           final sel = SelectionStore.instance.selected;
-          
+
           if (sel == null) {
-             return const Padding(
-               padding: EdgeInsets.only(top: 40),
-               child: Text('No object selected', style: TextStyle(color: Colors.white24)),
-             );
+            return const Padding(
+              padding: EdgeInsets.only(top: 40),
+              child: Text('No object selected',
+                  style: TextStyle(color: Colors.white24)),
+            );
           }
 
           return Column(
@@ -90,7 +91,8 @@ class _InspectorPanelState extends State<InspectorPanel> {
 
               // Botão Add Component
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -108,7 +110,7 @@ class _InspectorPanelState extends State<InspectorPanel> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 40), // Bottom padding
             ],
           );

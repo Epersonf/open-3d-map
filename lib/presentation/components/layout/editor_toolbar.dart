@@ -51,11 +51,13 @@ class _MagnetButton extends StatelessWidget {
       builder: (context, _) {
         final enabled = ToolStore.instance.snapEnabled;
         return IconButton(
-          icon: Icon(Icons.grid_4x4, size: 20, color: enabled ? Colors.blueAccent : Colors.white54),
+          icon: Icon(Icons.grid_4x4,
+              size: 20, color: enabled ? Colors.blueAccent : Colors.white54),
           tooltip: 'Snap Settings',
           style: IconButton.styleFrom(
             backgroundColor: enabled ? Colors.blue.withOpacity(0.2) : null,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
             padding: EdgeInsets.zero,
             visualDensity: VisualDensity.compact,
           ),
@@ -94,7 +96,8 @@ class _ToolButton extends StatelessWidget {
           color: isActive ? Colors.blueAccent : Colors.white54,
           style: IconButton.styleFrom(
             backgroundColor: isActive ? Colors.blue.withOpacity(0.2) : null,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
             padding: EdgeInsets.zero,
             visualDensity: VisualDensity.compact,
           ),
@@ -112,7 +115,8 @@ class _SpaceToggleButton extends StatelessWidget {
     return AnimatedBuilder(
       animation: ToolStore.instance,
       builder: (context, _) {
-        final isLocal = ToolStore.instance.transformSpace == TransformSpace.local;
+        final isLocal =
+            ToolStore.instance.transformSpace == TransformSpace.local;
         return TextButton.icon(
           onPressed: () => ToolStore.instance.toggleTransformSpace(),
           icon: Icon(

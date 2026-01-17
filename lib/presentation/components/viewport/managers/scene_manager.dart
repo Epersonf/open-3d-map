@@ -44,7 +44,8 @@ class SceneManager {
       group.name = newGameObject.name;
       group.userData['gameObjectId'] = newGameObject.id;
 
-      sceneObject = SceneObject(id: newGameObject.id, gameObject: newGameObject, object3d: group);
+      sceneObject = SceneObject(
+          id: newGameObject.id, gameObject: newGameObject, object3d: group);
       _sceneObjects[newGameObject.id] = sceneObject;
       scene.add(group);
 
@@ -73,25 +74,35 @@ class SceneManager {
           }
 
           if (!updated) {
-            try { oldComp.onDestroy(context); } catch (_) {}
-            try { newComp.onStart(context); } catch (_) {}
+            try {
+              oldComp.onDestroy(context);
+            } catch (_) {}
+            try {
+              newComp.onStart(context);
+            } catch (_) {}
           }
 
           oldComps.remove(newComp.id);
         } else {
           // New component
-          try { newComp.onStart(context); } catch (_) {}
+          try {
+            newComp.onStart(context);
+          } catch (_) {}
         }
 
         // preserve selection visual state
         if (_currentSelectionId == newGameObject.id) {
-          try { newComp.onSelected(context); } catch (_) {}
+          try {
+            newComp.onSelected(context);
+          } catch (_) {}
         }
       }
 
       // Destroy any removed components
       for (final removed in oldComps.values) {
-        try { removed.onDestroy(context); } catch (_) {}
+        try {
+          removed.onDestroy(context);
+        } catch (_) {}
       }
     }
 
@@ -104,7 +115,9 @@ class SceneManager {
     final context = _createContext(sceneObject);
 
     for (final component in sceneObject.gameObject.components) {
-      try { component.onStart(context); } catch (_) {}
+      try {
+        component.onStart(context);
+      } catch (_) {}
     }
   }
 
@@ -191,6 +204,7 @@ class SceneManager {
       }
     }
   }
+
   // --- Selection delegation ---
   // Track current selection so we can notify old/new components
   String? _currentSelectionId;

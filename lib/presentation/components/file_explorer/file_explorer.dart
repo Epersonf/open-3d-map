@@ -26,8 +26,12 @@ class FileExplorer extends StatelessWidget {
           final current = store.currentPath ?? store.assetsRoot!;
 
           final entries = store.entries;
-          final folders = entries.where((e) => FileSystemEntity.isDirectorySync(e.path)).toList();
-          final files = entries.where((e) => !FileSystemEntity.isDirectorySync(e.path)).toList();
+          final folders = entries
+              .where((e) => FileSystemEntity.isDirectorySync(e.path))
+              .toList();
+          final files = entries
+              .where((e) => !FileSystemEntity.isDirectorySync(e.path))
+              .toList();
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -39,16 +43,23 @@ class FileExplorer extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(current, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      child: Text(current,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12)),
                     ),
                     IconButton(
                       tooltip: 'Up',
                       onPressed: () async {
                         // disable if at assets root
-                        if (p.normalize(current) == p.normalize(store.assetsRoot!)) return;
+                        if (p.normalize(current) ==
+                            p.normalize(store.assetsRoot!)) return;
                         await store.cdUp();
                       },
-                      icon: Icon(Icons.arrow_upward, color: p.normalize(current) == p.normalize(store.assetsRoot!) ? Colors.white24 : Colors.white70),
+                      icon: Icon(Icons.arrow_upward,
+                          color: p.normalize(current) ==
+                                  p.normalize(store.assetsRoot!)
+                              ? Colors.white24
+                              : Colors.white70),
                     ),
                     IconButton(
                       tooltip: 'Reload',
@@ -68,22 +79,28 @@ class FileExplorer extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Folders', style: TextStyle(color: Colors.white70)),
+                            const Text('Folders',
+                                style: TextStyle(color: Colors.white70)),
                             const SizedBox(height: 6),
                             Expanded(
                               child: folders.isEmpty
-                                  ? const Text('No folders', style: TextStyle(color: Colors.white54))
+                                  ? const Text('No folders',
+                                      style: TextStyle(color: Colors.white54))
                                   : ListView.builder(
                                       itemCount: folders.length,
                                       itemBuilder: (ctx, i) {
                                         final f = folders[i];
                                         final name = p.basename(f.path);
                                         return GestureDetector(
-                                          onDoubleTap: () async => await store.cdInto(f.path),
+                                          onDoubleTap: () async =>
+                                              await store.cdInto(f.path),
                                           child: ListTile(
                                             dense: true,
-                                            leading: const Icon(Icons.folder, color: Colors.white70),
-                                            title: Text(name, style: const TextStyle(color: Colors.white)),
+                                            leading: const Icon(Icons.folder,
+                                                color: Colors.white70),
+                                            title: Text(name,
+                                                style: const TextStyle(
+                                                    color: Colors.white)),
                                             onTap: () async {
                                               await store.cdInto(f.path);
                                             },
@@ -101,24 +118,33 @@ class FileExplorer extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Files', style: TextStyle(color: Colors.white70)),
+                            const Text('Files',
+                                style: TextStyle(color: Colors.white70)),
                             const SizedBox(height: 6),
                             Expanded(
                               child: files.isEmpty
-                                  ? const Text('No files', style: TextStyle(color: Colors.white54))
+                                  ? const Text('No files',
+                                      style: TextStyle(color: Colors.white54))
                                   : ListView.builder(
                                       itemCount: files.length,
                                       itemBuilder: (ctx, i) {
                                         final f = files[i];
                                         final name = p.basename(f.path);
                                         return GestureDetector(
-                                            onDoubleTap: () async {
-                                            final ext = p.extension(f.path).toLowerCase().replaceFirst('.', '');
+                                          onDoubleTap: () async {
+                                            final ext = p
+                                                .extension(f.path)
+                                                .toLowerCase()
+                                                .replaceFirst('.', '');
                                             // Only GLB is supported for import into the scene
                                             const supported = ['glb'];
                                             if (supported.contains(ext)) {
-                                              await ProjectStore.instance.addAssetAsGameObject(f.path);
-                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added $name to scene')));
+                                              await ProjectStore.instance
+                                                  .addAssetAsGameObject(f.path);
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                      content: Text(
+                                                          'Added $name to scene')));
                                             } else {
                                               // open default
                                               // ignore: avoid_slow_async_io
@@ -127,8 +153,12 @@ class FileExplorer extends StatelessWidget {
                                           },
                                           child: ListTile(
                                             dense: true,
-                                            leading: const Icon(Icons.insert_drive_file, color: Colors.white70),
-                                            title: Text(name, style: const TextStyle(color: Colors.white)),
+                                            leading: const Icon(
+                                                Icons.insert_drive_file,
+                                                color: Colors.white70),
+                                            title: Text(name,
+                                                style: const TextStyle(
+                                                    color: Colors.white)),
                                             onTap: () {
                                               // open containing folder in explorer and select file
                                               // ignore: avoid_slow_async_io

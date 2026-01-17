@@ -12,7 +12,7 @@ class AddComponentModal extends StatefulWidget {
 
 class _AddComponentModalState extends State<AddComponentModal> {
   final TextEditingController _searchCtrl = TextEditingController();
-  
+
   String _filter = '';
   late final Map<String, String> _availableComponents;
 
@@ -28,12 +28,12 @@ class _AddComponentModalState extends State<AddComponentModal> {
     final filtered = _availableComponents.entries.where((entry) {
       final id = entry.key;
       final name = entry.value;
-      
+
       // Se já tem, não mostra (assumindo 1 componente por tipo)
       if (widget.existingComponentIds.contains(id)) return false;
 
-      return id.contains(_filter.toLowerCase()) || 
-             name.toLowerCase().contains(_filter.toLowerCase());
+      return id.contains(_filter.toLowerCase()) ||
+          name.toLowerCase().contains(_filter.toLowerCase());
     }).toList();
 
     return Container(
@@ -47,7 +47,8 @@ class _AddComponentModalState extends State<AddComponentModal> {
           // Handle de arrastar
           Center(
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white24,
@@ -55,7 +56,7 @@ class _AddComponentModalState extends State<AddComponentModal> {
               ),
             ),
           ),
-          
+
           // Campo de Busca
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -87,9 +88,13 @@ class _AddComponentModalState extends State<AddComponentModal> {
               itemBuilder: (context, index) {
                 final entry = filtered[index];
                 return ListTile(
-                  leading: const Icon(Icons.extension, color: Colors.blueAccent),
-                  title: Text(entry.value, style: const TextStyle(color: Colors.white)),
-                  subtitle: Text(entry.key, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  leading:
+                      const Icon(Icons.extension, color: Colors.blueAccent),
+                  title: Text(entry.value,
+                      style: const TextStyle(color: Colors.white)),
+                  subtitle: Text(entry.key,
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10)),
                   onTap: () {
                     // Retorna o ID do tipo selecionado
                     Navigator.of(context).pop(entry.key);
@@ -105,7 +110,8 @@ class _AddComponentModalState extends State<AddComponentModal> {
 }
 
 /// Helper para abrir o modal
-Future<String?> showAddComponentModal(BuildContext context, List<String> existingIds) {
+Future<String?> showAddComponentModal(
+    BuildContext context, List<String> existingIds) {
   return showModalBottomSheet<String>(
     context: context,
     backgroundColor: Colors.transparent,

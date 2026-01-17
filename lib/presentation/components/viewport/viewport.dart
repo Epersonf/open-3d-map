@@ -29,7 +29,7 @@ class _Viewport3DState extends State<Viewport3D> {
   // Indica que a cena ThreeJS foi inicializada e `threeJs.camera` está disponível
   bool _ready = false;
   late FocusNode _focusNode;
-  
+
   VoidCallback? _projectListener;
   // Listener para requisições de foco da câmera
   ReactionDisposer? _selectionDisposer;
@@ -50,7 +50,7 @@ class _Viewport3DState extends State<Viewport3D> {
 
     // Criar o controller aqui é seguro pois o construtor não acessa a câmera.
     freeCam = FreeCameraController(threeJs);
-    
+
     // Inicializar gerenciadores que não dependem da cena
     modelManager = ModelManager();
 
@@ -106,7 +106,8 @@ class _Viewport3DState extends State<Viewport3D> {
 
             if (threeJs.width != constraints.maxWidth ||
                 threeJs.height != constraints.maxHeight) {
-              threeJs.renderer?.setSize(constraints.maxWidth, constraints.maxHeight);
+              threeJs.renderer
+                  ?.setSize(constraints.maxWidth, constraints.maxHeight);
 
               // Atualizar aspect ratio da câmera
               if (threeJs.camera is three.PerspectiveCamera) {
@@ -122,7 +123,8 @@ class _Viewport3DState extends State<Viewport3D> {
               // Segurança: não tente selecionar antes da cena estar pronta
               if (!_ready) return;
 
-              selectionController?.onTapDown(details, _viewportKey.currentContext!);
+              selectionController?.onTapDown(
+                  details, _viewportKey.currentContext!);
             },
             child: Listener(
               onPointerDown: (e) {
@@ -134,7 +136,8 @@ class _Viewport3DState extends State<Viewport3D> {
                   _focusNode.requestFocus();
                 }
 
-                final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+                final renderBox = _viewportKey.currentContext
+                    ?.findRenderObject() as RenderBox?;
                 final handled = renderBox != null
                     ? InputManager.instance.handlePointerDown(e, renderBox.size)
                     : false;
@@ -158,7 +161,8 @@ class _Viewport3DState extends State<Viewport3D> {
 
                 // Continua com câmera/hover
                 freeCam.onPointerMove(event);
-                selectionController?.onPointerMove(event, _viewportKey.currentContext!);
+                selectionController?.onPointerMove(
+                    event, _viewportKey.currentContext!);
               },
               child: SizedBox.expand(
                 key: _viewportKey,
@@ -240,7 +244,6 @@ class _Viewport3DState extends State<Viewport3D> {
 
   /// Método centralizado para gerenciar input de teclado
   void _onKey(KeyEvent event) {
-
     // 2. Atalhos de Editor (Apenas no KeyDown para não disparar várias vezes)
     if (event is KeyDownEvent) {
       // Se estivermos "voando" com a câmera (Botão direito segurado),
@@ -268,7 +271,7 @@ class _Viewport3DState extends State<Viewport3D> {
     }
 
     final scene = project.scenes.first;
-    
+
     for (final rootObject in scene.rootObjects) {
       await sceneManager.updateSceneObject(rootObject);
       // Recurse children after the parent is ensured
@@ -281,13 +284,14 @@ class _Viewport3DState extends State<Viewport3D> {
     final projectObjectIds = _getAllGameObjectIds(scene.rootObjects);
     final currentObjectIds = sceneManager.sceneObjects.keys.toSet();
     final objectsToRemove = currentObjectIds.difference(projectObjectIds);
-    
+
     for (final id in objectsToRemove) {
       sceneManager.removeSceneObject(id);
     }
   }
 
-  Future<void> _processGameObject(GameObject gameObject, String? parentId) async {
+  Future<void> _processGameObject(
+      GameObject gameObject, String? parentId) async {
     await sceneManager.updateSceneObject(gameObject);
     for (final child in gameObject.children) {
       await _processGameObject(child, gameObject.id);
@@ -298,18 +302,18 @@ class _Viewport3DState extends State<Viewport3D> {
 
   Set<String> _getAllGameObjectIds(List<GameObject> objects) {
     final ids = <String>{};
-    
+
     void collectIds(GameObject obj) {
       ids.add(obj.id);
       for (final child in obj.children) {
         collectIds(child);
       }
     }
-    
+
     for (final obj in objects) {
       collectIds(obj);
     }
-    
+
     return ids;
   }
 

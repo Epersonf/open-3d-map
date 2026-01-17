@@ -6,14 +6,15 @@ import '../../../../core/utils/model_import.dart';
 class ModelManager {
   final Map<String, three.Object3D> _loadedModels = {};
 
-  Future<three.Object3D?> loadModel(String assetId, String projectPath, String assetPath) async {
+  Future<three.Object3D?> loadModel(
+      String assetId, String projectPath, String assetPath) async {
     if (_loadedModels.containsKey(assetId)) {
       return _loadedModels[assetId];
     }
 
     final absolutePath = p.join(projectPath, assetPath);
     final model = await ModelImport.loadModel(absolutePath);
-    
+
     if (model != null) {
       _loadedModels[assetId] = model;
       return model;

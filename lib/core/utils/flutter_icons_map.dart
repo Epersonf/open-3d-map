@@ -8,7 +8,7 @@ class FlutterIconsMap {
   }
 
   static List<String> get allNames => _icons.keys.toList();
-  
+
   static Map<String, IconData> get map => _icons;
 
   // Lista curada com os ícones mais comuns para jogos/apps.
@@ -25,7 +25,7 @@ class FlutterIconsMap {
     'sound': Icons.volume_up,
     'music': Icons.music_note,
     'settings': Icons.settings,
-    
+
     // Objects & Items
     'key': Icons.vpn_key,
     'door': Icons.door_front_door,
@@ -38,7 +38,7 @@ class FlutterIconsMap {
     'shield': Icons.shield,
     'book': Icons.menu_book,
     'map': Icons.map,
-    
+
     // UI & Symbols
     'home': Icons.home,
     'search': Icons.search,

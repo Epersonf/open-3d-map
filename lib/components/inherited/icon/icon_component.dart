@@ -4,36 +4,45 @@ import 'package:three_js/three_js.dart' as three;
 import '../../game_component.dart';
 import '../../../domain/scene/scene_context.dart';
 import '../../../core/utils/icon_texture_generator.dart';
-import '../../../core/utils/flutter_icons_map.dart'; // Importe o mapa
-import 'icon_inspector.dart';
+import '../../../core/utils/flutter_icons_map.dart';
+import 'ui/icon_inspector.dart';
 
 part 'icon_component.g.dart';
 
 @JsonSerializable()
 class IconComponent extends GameComponent {
   static const String typeId = 'icon';
-  // Nome fixo para identificar o objeto visual na cena, independente da instância do componente
   static const String _spriteName = 'icon_component_visual';
-  // Chave para guardar o ID da geração atual no userData do objeto pai
   static const String _genKey = 'icon_generation_id';
 
   @override
   String get id => typeId;
 
   final String iconName;
+  // Nova propriedade de tamanho
+  final double iconSize;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   three.Object3D? _sprite;
 
-  IconComponent({this.iconName = 'spawn'});
+  IconComponent({
+    this.iconName = 'spawn',
+    this.iconSize = 0.5, // Valor padrão
+  });
 
-  factory IconComponent.fromJson(Map<String, dynamic> json) => _$IconComponentFromJson(json);
-  
+  factory IconComponent.fromJson(Map<String, dynamic> json) =>
+      _$IconComponentFromJson(json);
+
   @override
   Map<String, dynamic> toJson() => _$IconComponentToJson(this);
 
   @override
-  IconComponent copyWith({String? iconName}) => IconComponent(iconName: iconName ?? this.iconName);
+  IconComponent copyWith({String? iconName, double? iconSize}) {
+    return IconComponent(
+      iconName: iconName ?? this.iconName,
+      iconSize: iconSize ?? this.iconSize,
+    );
+  }
 
   @override
   Widget inspectorWidget() => const IconInspector();
@@ -41,12 +50,9 @@ class IconComponent extends GameComponent {
   @override
   void onStart(SceneContext owner) async {
     final myGenId = DateTime.now().millisecondsSinceEpoch;
-    
     owner.parent.userData[_genKey] = myGenId;
 
-    // --- MUDANÇA: Busca dinâmica no mapa estático ---
     final iconData = FlutterIconsMap.fromName(iconName);
-    // ------------------------------------------------
 
     final texture = await IconTextureGenerator.createTextureFromIcon(
       iconData,
@@ -54,8 +60,7 @@ class IconComponent extends GameComponent {
       color: Colors.white,
     );
 
-    final currentGenId = owner.parent.userData[_genKey];
-    if (currentGenId != myGenId) {
+    if (owner.parent.userData[_genKey] != myGenId) {
       texture.dispose();
       return;
     }
@@ -70,8 +75,10 @@ class IconComponent extends GameComponent {
 
     _sprite = three.Sprite(material);
     _sprite!.name = _spriteName;
-    _sprite!.scale.setValues(0.5, 0.5, 0.5);
-    
+
+    // Aplica o tamanho inicial
+    _sprite!.scale.setValues(iconSize, iconSize, iconSize);
+
     owner.parent.add(_sprite!);
   }
 
@@ -94,18 +101,27 @@ class IconComponent extends GameComponent {
   @override
   bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
     if (oldComponent is IconComponent) {
-      if (oldComponent.iconName == iconName) {
-        _sprite = oldComponent._sprite;
-        
-        if (_sprite == null) {
-           onStart(owner);
-        }
-        return true;
-      } 
-      else {
+      // Se mudou o nome, recria tudo
+      if (oldComponent.iconName != iconName) {
         onStart(owner);
         return true;
       }
+
+      // Se mudou só o tamanho, atualiza direto a escala (Performance)
+      if (oldComponent.iconSize != iconSize) {
+        _sprite = oldComponent._sprite;
+        if (_sprite != null) {
+          _sprite!.scale.setValues(iconSize, iconSize, iconSize);
+        } else {
+          onStart(owner);
+        }
+        return true;
+      }
+
+      // Se nada mudou, mantem referência
+      _sprite = oldComponent._sprite;
+      if (_sprite == null) onStart(owner);
+      return true;
     }
     return false;
   }

@@ -39,10 +39,11 @@ class ProjectStore extends ChangeNotifier {
   }
 
   // Modificado para receber opcionalmente o nome do arquivo do projeto
-  void setProject(Project project, String path, {String fileName = 'project.o3m'}) {
+  void setProject(Project project, String path,
+      {String fileName = 'project.o3m'}) {
     _project = project;
     _projectFileName = fileName;
-  
+
     setProjectPath(path);
     notifyListeners();
   }
@@ -124,7 +125,10 @@ class ProjectStore extends ChangeNotifier {
       assetId = existing.first.id;
     } else {
       assetId = const Uuid().v4();
-      final a = Asset(id: assetId, path: rel, type: p.extension(absolutePath).replaceFirst('.', ''));
+      final a = Asset(
+          id: assetId,
+          path: rel,
+          type: p.extension(absolutePath).replaceFirst('.', ''));
       _project!.assets.add(a);
     }
 
@@ -139,7 +143,8 @@ class ProjectStore extends ChangeNotifier {
     );
 
     if (_project!.scenes.isEmpty) {
-      final scene = Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [go]);
+      final scene =
+          Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [go]);
       _project!.scenes.add(scene);
     } else {
       _project!.scenes.first.rootObjects.add(go);
@@ -147,7 +152,10 @@ class ProjectStore extends ChangeNotifier {
 
     final exists = _project!.assets.any((a) => a.path == rel);
     if (!exists) {
-      final a = Asset(id: base, path: rel, type: p.extension(absolutePath).replaceFirst('.', ''));
+      final a = Asset(
+          id: base,
+          path: rel,
+          type: p.extension(absolutePath).replaceFirst('.', ''));
       _project!.assets.add(a);
     }
 
@@ -158,7 +166,8 @@ class ProjectStore extends ChangeNotifier {
   Future<void> saveProject() async {
     if (_project == null || _projectPath == null) return;
     final file = File(p.join(_projectPath!, _projectFileName));
-    final encoded = const JsonEncoder.withIndent('  ').convert(_project!.toJson());
+    final encoded =
+        const JsonEncoder.withIndent('  ').convert(_project!.toJson());
     await file.writeAsString(encoded);
   }
 
@@ -244,7 +253,8 @@ class ProjectStore extends ChangeNotifier {
   void duplicateGameObject(GameObject original) {
     if (_project == null || _project!.scenes.isEmpty) return;
 
-    final clone = _deepCloneGameObject(original, original.parentId, isRootClone: true);
+    final clone =
+        _deepCloneGameObject(original, original.parentId, isRootClone: true);
     final scene = _project!.scenes.first;
 
     if (original.parentId == null) {
@@ -269,11 +279,15 @@ class ProjectStore extends ChangeNotifier {
       id: const Uuid().v4(),
       name: 'Empty Object',
       parentId: parentId,
-      components: [TransformComponent.defaultValue(), IconComponent(iconName: 'spawn')],
+      components: [
+        TransformComponent.defaultValue(),
+        IconComponent(iconName: 'spawn')
+      ],
     );
 
     if (_project!.scenes.isEmpty) {
-      final scene = Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [newObj]);
+      final scene =
+          Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [newObj]);
       _project!.scenes.add(scene);
     } else {
       if (parentId == null) {
@@ -305,6 +319,7 @@ class ProjectStore extends ChangeNotifier {
           }
           return false;
         }
+
         if (_isDescendant(child, newParentId)) return;
       }
     }
@@ -314,7 +329,9 @@ class ProjectStore extends ChangeNotifier {
     final originalObj = objectLookup[childId];
     if (originalObj == null) return;
 
-    final oldParent = originalObj.parentId != null ? objectLookup[originalObj.parentId] : null;
+    final oldParent = originalObj.parentId != null
+        ? objectLookup[originalObj.parentId]
+        : null;
     final newParent = newParentId != null ? objectLookup[newParentId] : null;
 
     // 3. Processar componentes para permitir que cada um ajuste seus dados
@@ -349,7 +366,8 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  GameObject _deepCloneGameObject(GameObject source, String? parentId, {bool isRootClone = false}) {
+  GameObject _deepCloneGameObject(GameObject source, String? parentId,
+      {bool isRootClone = false}) {
     final newId = const Uuid().v4();
     final newName = isRootClone ? '${source.name} (Clone)' : source.name;
 
@@ -361,7 +379,9 @@ class ProjectStore extends ChangeNotifier {
       name: newName,
       parentId: parentId,
       components: newComponents,
-      children: source.children.map((child) => _deepCloneGameObject(child, newId)).toList(),
+      children: source.children
+          .map((child) => _deepCloneGameObject(child, newId))
+          .toList(),
     );
   }
 }

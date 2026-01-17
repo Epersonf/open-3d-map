@@ -6,7 +6,7 @@ class ComponentSection extends StatefulWidget {
   final VoidCallback onRemove;
 
   const ComponentSection({
-    super.key, 
+    super.key,
     required this.component,
     required this.onRemove,
   });
@@ -50,7 +50,9 @@ class _ComponentSectionState extends State<ComponentSection> {
                     child: Row(
                       children: [
                         Icon(
-                          _isExpanded ? Icons.arrow_drop_down : Icons.arrow_right,
+                          _isExpanded
+                              ? Icons.arrow_drop_down
+                              : Icons.arrow_right,
                           color: Colors.white70,
                           size: 20,
                         ),
@@ -68,13 +70,14 @@ class _ComponentSectionState extends State<ComponentSection> {
                   ),
                 ),
               ),
-              
+
               // Menu de 3 pontos
               SizedBox(
                 width: 28,
                 height: 28,
                 child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 16, color: Colors.white54),
+                  icon: const Icon(Icons.more_vert,
+                      size: 16, color: Colors.white54),
                   color: const Color(0xFF2A2A2A),
                   tooltip: 'Component Actions',
                   onSelected: (value) {
@@ -85,7 +88,8 @@ class _ComponentSectionState extends State<ComponentSection> {
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 'reset',
-                      child: Text('Reset', style: TextStyle(color: Colors.white)),
+                      child:
+                          Text('Reset', style: TextStyle(color: Colors.white)),
                     ),
                     const PopupMenuItem(
                       value: 'remove',
@@ -93,7 +97,8 @@ class _ComponentSectionState extends State<ComponentSection> {
                         children: [
                           Icon(Icons.delete, size: 16, color: Colors.redAccent),
                           SizedBox(width: 8),
-                          Text('Remove Component', style: TextStyle(color: Colors.redAccent)),
+                          Text('Remove Component',
+                              style: TextStyle(color: Colors.redAccent)),
                         ],
                       ),
                     ),
@@ -103,7 +108,7 @@ class _ComponentSectionState extends State<ComponentSection> {
             ],
           ),
         ),
-        
+
         // --- Body (Inspector) ---
         if (_isExpanded)
           Container(
