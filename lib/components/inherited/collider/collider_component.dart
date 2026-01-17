@@ -94,39 +94,57 @@ class ColliderComponent extends GameComponent {
   @override
   bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
     if (oldComponent is ColliderComponent) {
-      // Se mudar o tipo, precisamos recriar a geometria
+      // 1. CRUCIAL: Herdar a referência do objeto 3D do componente antigo.
+      // Como 'this' é uma nova instância, _gizmoMesh começa nulo.
+      _gizmoMesh = oldComponent._gizmoMesh;
+
+      // Opcional: Anular a referência no antigo para evitar que ele tente destruir
+      // algo que agora pertence a nós, caso o lifecycle chame algo estranho.
+      oldComponent._gizmoMesh = null;
+
+      // 2. Se mudou o tipo (Box <-> Sphere), destroi tudo e recria do zero.
       if (oldComponent.type != type) {
         _removeVisuals(owner.parent);
         _createVisuals(owner.parent);
         return true;
       }
 
-      // Se mudou apenas dimensões, podemos tentar atualizar ou recriar
+      // 3. Verifica se as dimensões mudaram
+      bool dimsChanged = false;
+      if (type == ColliderType.box) {
+        dimsChanged = (oldComponent.size.x != size.x ||
+            oldComponent.size.y != size.y ||
+            oldComponent.size.z != size.z);
+      } else if (type == ColliderType.sphere) {
+        dimsChanged = (oldComponent.radius != radius);
+      }
+
+      // Verifica se a posição (offset) mudou
+      bool centerChanged = (oldComponent.center.x != center.x ||
+          oldComponent.center.y != center.y ||
+          oldComponent.center.z != center.z);
+
       if (_gizmoMesh != null) {
-        // Atualiza posição (Center)
-        _gizmoMesh!.position.setValues(center.x, center.y, center.z);
-        
-        // Para simplificar a atualização de geometria, recriamos se as dimensões mudarem
-        // Em uma engine real faríamos apenas scale, mas aqui garante a precisão visual
-        bool dimsChanged = false;
-        if (type == ColliderType.box) {
-           dimsChanged = (oldComponent.size.x != size.x || 
-                          oldComponent.size.y != size.y || 
-                          oldComponent.size.z != size.z);
-        } else if (type == ColliderType.sphere) {
-           dimsChanged = (oldComponent.radius != radius);
+        // Atualiza posição se necessário
+        if (centerChanged) {
+          _gizmoMesh!.position.setValues(center.x, center.y, center.z);
         }
 
+        // Se as dimensões mudaram, o jeito mais limpo no ThreeJS
+        // para geometrias primitivas é recriar o mesh
         if (dimsChanged) {
-           _removeVisuals(owner.parent);
-           _createVisuals(owner.parent);
+          _removeVisuals(owner.parent);
+          _createVisuals(owner.parent);
         }
       } else {
-        // Caso visual tenha sido perdido ou não criado (ex: Mesh collider que virou Box)
+        // Se por algum motivo não herdamos um mesh (ex: bug anterior), forçamos uma limpeza e criação
+        _removeVisuals(owner.parent); // Garante limpeza de lixo órfão por nome
         _createVisuals(owner.parent);
       }
+
       return true;
     }
+
     return false;
   }
 
@@ -168,19 +186,29 @@ class ColliderComponent extends GameComponent {
   }
 
   void _removeVisuals(three.Object3D parent) {
+    // 1. Tenta remover pela referência direta
     if (_gizmoMesh != null) {
       _gizmoMesh!.removeFromParent();
       _gizmoMesh!.geometry?.dispose();
       _gizmoMesh!.material?.dispose();
       _gizmoMesh = null;
-    } else {
-      // Fallback de limpeza por nome caso a referência se perca
-      for (int i = parent.children.length - 1; i >= 0; i--) {
-        final child = parent.children[i];
-        if (child.name == _visualName) {
-          child.removeFromParent();
-          (child as three.Mesh).geometry?.dispose();
-        }
+    }
+
+    // 2. BUSCA DE SEGURANÇA:
+    // Remove qualquer filho que tenha o nome do gizmo visual deste componente.
+    // Isso resolve o problema de "fantasmas" que ficaram na cena se a referência foi perdida.
+    final List<three.Object3D> toRemove = [];
+    for (final child in parent.children) {
+      if (child.name == _visualName) {
+        toRemove.add(child);
+      }
+    }
+
+    for (final child in toRemove) {
+      child.removeFromParent();
+      if (child is three.Mesh) {
+        child.geometry?.dispose();
+        child.material?.dispose();
       }
     }
   }
