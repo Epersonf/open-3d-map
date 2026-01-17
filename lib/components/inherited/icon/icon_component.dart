@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:open_3d_mapper/domain/scene/game_object.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../domain/scene/game_component.dart';
 import '../../../domain/scene/scene_context.dart';
@@ -95,4 +96,9 @@ class IconComponent implements GameComponent {
 
   @override
   void onUpdate(owner, double dt) {}
+
+  @override
+  GameComponent onReparent(GameObject self, GameObject? oldParent, GameObject? newParent, Map<String, GameObject> objectLookup) {
+    return this;
+  }
 }

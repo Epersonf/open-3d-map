@@ -93,6 +93,24 @@ class ProjectStore extends ChangeNotifier {
     await refreshCurrent();
   }
 
+  /// Create a lookup map of id->GameObject for the whole project
+  Map<String, GameObject> _createObjectLookup() {
+    final map = <String, GameObject>{};
+    if (_project == null) return map;
+
+    void traverse(List<GameObject> list) {
+      for (final obj in list) {
+        map[obj.id] = obj;
+        traverse(obj.children);
+      }
+    }
+
+    for (final scene in _project!.scenes) {
+      traverse(scene.rootObjects);
+    }
+    return map;
+  }
+
   Future<void> addAssetAsGameObject(String absolutePath) async {
     if (_project == null || _projectPath == null) return;
 
@@ -172,7 +190,7 @@ class ProjectStore extends ChangeNotifier {
     return replaced;
   }
 
-  bool deleteGameObject(String id) {
+  bool deleteGameObject(String id, {bool notify = true}) {
     if (_project == null) return false;
     bool deleted = false;
 
@@ -196,7 +214,7 @@ class ProjectStore extends ChangeNotifier {
       }
     }
 
-    if (deleted) {
+    if (deleted && notify) {
       notifyListeners();
     }
     return deleted;
@@ -276,6 +294,7 @@ class ProjectStore extends ChangeNotifier {
     if (_project == null) return;
     if (childId == newParentId) return;
 
+    // 1. Validar descendência
     if (newParentId != null) {
       final child = findGameObjectById(childId);
       if (child != null) {
@@ -290,44 +309,43 @@ class ProjectStore extends ChangeNotifier {
       }
     }
 
-    GameObject? removed;
-    bool _removeInList(List<GameObject> list) {
-      for (var i = 0; i < list.length; i++) {
-        if (list[i].id == childId) {
-          removed = list.removeAt(i);
-          return true;
-        }
-        if (list[i].children.isNotEmpty) {
-          if (_removeInList(list[i].children)) return true;
-        }
-      }
-      return false;
-    }
+    // 2. Preparar lookup e encontrar objetos
+    final objectLookup = _createObjectLookup();
+    final originalObj = objectLookup[childId];
+    if (originalObj == null) return;
 
-    for (final scene in _project!.scenes) {
-      if (_removeInList(scene.rootObjects)) break;
-    }
+    final oldParent = originalObj.parentId != null ? objectLookup[originalObj.parentId] : null;
+    final newParent = newParentId != null ? objectLookup[newParentId] : null;
 
-    if (removed == null) return;
+    // 3. Processar componentes para permitir que cada um ajuste seus dados
+    final newComponents = originalObj.components.map((comp) {
+      return comp.onReparent(originalObj, oldParent, newParent, objectLookup);
+    }).toList();
 
-    final moved = GameObject(
-      id: removed!.id,
-      name: removed!.name,
+    // 4. Criar o objeto atualizado com novos componentes
+    final movedObj = GameObject(
+      id: originalObj.id,
+      name: originalObj.name,
       parentId: newParentId,
-      components: removed!.components,
-      children: removed!.children,
+      components: newComponents,
+      children: originalObj.children,
     );
 
+    // 5. Remover da árvore antiga e adicionar na nova
+    bool removed = deleteGameObject(childId, notify: false);
+    if (!removed) return;
+
     if (newParentId == null) {
-      _project!.scenes.first.rootObjects.add(moved);
+      _project!.scenes.first.rootObjects.add(movedObj);
     } else {
-      final parent = findGameObjectById(newParentId);
-      if (parent != null) {
-        parent.children.add(moved);
+      final parentInTree = findGameObjectById(newParentId);
+      if (parentInTree != null) {
+        parentInTree.children.add(movedObj);
       } else {
-        _project!.scenes.first.rootObjects.add(moved);
+        _project!.scenes.first.rootObjects.add(movedObj);
       }
     }
+
     notifyListeners();
   }
 

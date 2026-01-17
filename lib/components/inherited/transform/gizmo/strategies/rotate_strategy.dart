@@ -18,7 +18,7 @@ class RotateStrategy implements TransformStrategy {
   }
 
   @override
-  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
+  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space, three.Object3D? object3d) {
     var transform = original.getComponent<TransformComponent>();
     if (transform == null) return original;
 
@@ -41,7 +41,29 @@ class RotateStrategy implements TransformStrategy {
     if (space == TransformSpace.local) {
       currentQuat.multiply(deltaQuat);
     } else {
-      currentQuat.premultiply(deltaQuat);
+      // Global Rotation
+      // R_new = R_delta * R_old
+      // Porém, se tiver pai, o "Global Up" não é o "Parent Up".
+      // Para correção total de rotação global com pai, seria necessário:
+      // q_world = q_parent * q_local
+      // q_world_new = q_delta_world * q_world
+      // q_local_new = inv(q_parent) * q_world_new
+      
+      if (object3d != null && object3d.parent != null) {
+         final parentQuat = three.Quaternion();
+         object3d.parent!.getWorldQuaternion(parentQuat);
+         
+         // Convertemos o delta global para delta relativo ao pai
+         final invParent = parentQuat.clone()..invert();
+         // Transforma o eixo de rotação global para o espaço do pai
+         axisVector.applyQuaternion(invParent);
+         deltaQuat.setFromAxisAngle(axisVector, deltaRad);
+         
+         // Aplica à rotação local (que é relativa ao pai)
+         currentQuat.premultiply(deltaQuat);
+      } else {
+         currentQuat.premultiply(deltaQuat);
+      }
     }
 
     final newEuler = three.Euler().setFromQuaternion(currentQuat, three.RotationOrders.xyz);

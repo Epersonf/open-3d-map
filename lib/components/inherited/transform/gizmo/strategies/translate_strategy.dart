@@ -18,13 +18,13 @@ class TranslateStrategy implements TransformStrategy {
   }
 
   @override
-  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
+  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space, three.Object3D? object3d) {
     var transform = original.getComponent<TransformComponent>();
     if (transform == null) return original;
 
     final position = three.Vector3(transform.position.x, transform.position.y, transform.position.z);
+    // 1. Definir o vetor de movimento no espaço desejado (Global ou Local do Objeto)
     three.Vector3 moveVector;
-
     switch (axis) {
       case GizmoAxis.x: moveVector = three.Vector3(1, 0, 0); break;
       case GizmoAxis.y: moveVector = three.Vector3(0, 1, 0); break;
@@ -32,6 +32,7 @@ class TranslateStrategy implements TransformStrategy {
     }
 
     if (space == TransformSpace.local) {
+      // Se for Local Space, aplicamos a rotação LOCAL do próprio objeto ao vetor.
       final euler = three.Euler(
         transform.rotation.x * (3.14159265359 / 180),
         transform.rotation.y * (3.14159265359 / 180),
@@ -39,6 +40,30 @@ class TranslateStrategy implements TransformStrategy {
       );
       final quaternion = three.Quaternion().setFromEuler(euler);
       moveVector.applyQuaternion(quaternion);
+    }
+
+    // 2. [CRITICAL FIX] Compensação do Pai
+    // Se o objeto tem um pai, o vetor de movimento GLOBAL (ou Local transformado)
+    // precisa ser convertido para o espaço LOCAL do pai, pois 'transform.position'
+    // é relativo ao pai.
+    if (object3d != null && object3d.parent != null) {
+        // Pegar a rotação do mundo do pai
+        final parentWorldQuat = three.Quaternion();
+        object3d.parent!.getWorldQuaternion(parentWorldQuat);
+        
+        // Inverter essa rotação
+        parentWorldQuat.invert();
+        
+        // Aplicar a rotação inversa ao nosso vetor de movimento.
+        // Isso alinha o vetor global com o sistema de coordenadas local do pai.
+        moveVector.applyQuaternion(parentWorldQuat);
+
+        // Opcional: Compensar escala do pai se necessário (se o pai tiver scale != 1)
+        final parentScale = three.Vector3();
+        object3d.parent!.getWorldScale(parentScale);
+        if (parentScale.x != 0) moveVector.x /= parentScale.x;
+        if (parentScale.y != 0) moveVector.y /= parentScale.y;
+        if (parentScale.z != 0) moveVector.z /= parentScale.z;
     }
 
     final scaledMove = three.Vector3(

@@ -29,6 +29,9 @@ class GizmoController {
   three.Camera? _camera;
   GizmoAssets? _gizmoAssets;
   
+  // Referência ao objeto 3D real da cena para cálculos de mundo
+  three.Object3D? _currentObject3D;
+
   // Flag para evitar recarregar assets múltiplas vezes
   bool _initialized = false;
 
@@ -68,8 +71,12 @@ class GizmoController {
     }
   }
 
+  // [FIX] Agora aceita o Object3D opcionalmente
   /// Chamado a cada frame ou quando a seleção muda (via TransformComponent)
-  void update() {
+  void update([three.Object3D? currentObject]) {
+    if (currentObject != null) {
+      _currentObject3D = currentObject;
+    }
     _updateVisuals();
   }
 
@@ -94,17 +101,31 @@ class GizmoController {
     final gizmo = _activeGizmoModel!;
     gizmo.visible = true;
 
-    gizmo.position.setValues(transform.position.x, transform.position.y, transform.position.z);
-    
-    final space = ToolStore.instance.transformSpace;
-    if (space == TransformSpace.local) {
-      gizmo.rotation.set(
-        transform.rotation.x * (3.14159 / 180),
-        transform.rotation.y * (3.14159 / 180),
-        transform.rotation.z * (3.14159 / 180),
-      );
+    // [FIX] USAR WORLD POSITION
+    // Em vez de usar transform.position (Local), pegamos a posição do mundo do Object3D
+        if (_currentObject3D != null) {
+      final worldPos = three.Vector3();
+      _currentObject3D!.getWorldPosition(worldPos);
+      gizmo.position.setValues(worldPos.x, worldPos.y, worldPos.z);
+      
+      // [FIX] Rotação do Gizmo
+      final space = ToolStore.instance.transformSpace;
+      if (space == TransformSpace.local) {
+        // Se for Local, o gizmo deve acompanhar a rotação de mundo do objeto
+        final worldQuat = three.Quaternion();
+        _currentObject3D!.getWorldQuaternion(worldQuat);
+        
+        gizmo.quaternion.x = worldQuat.x;
+        gizmo.quaternion.y = worldQuat.y;
+        gizmo.quaternion.z = worldQuat.z;
+        gizmo.quaternion.w = worldQuat.w;
+      } else {
+        // Global: sempre alinhado com o mundo (0,0,0)
+        gizmo.rotation.set(0, 0, 0);
+      }
     } else {
-      gizmo.rotation.set(0, 0, 0);
+      // Fallback para comportamento antigo se algo der errado
+      gizmo.position.setValues(transform.position.x, transform.position.y, transform.position.z);
     }
 
     final distance = _camera!.position.distanceTo(gizmo.position);
@@ -165,13 +186,14 @@ class GizmoController {
      final strategy = _strategies[mode];
 
      if (strategy != null) {
-       final delta = strategy.calculateDelta(_activeAxis!, dx, dy);
-       final updatedObject = strategy.apply(
-         SelectionStore.instance.selected!,
-         _activeAxis!,
-         delta,
-         space,
-       );
+      final delta = strategy.calculateDelta(_activeAxis!, dx, dy);
+      final updatedObject = strategy.apply(
+        SelectionStore.instance.selected!,
+        _activeAxis!,
+        delta,
+        space,
+        _currentObject3D, // [FIX] Passamos o objeto 3D para cálculo de matrizes
+      );
 
        ProjectStore.instance.updateGameObject(updatedObject);
        SelectionStore.instance.select(updatedObject);

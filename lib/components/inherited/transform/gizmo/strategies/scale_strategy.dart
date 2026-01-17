@@ -18,7 +18,7 @@ class ScaleStrategy implements TransformStrategy {
   }
 
   @override
-  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space) {
+  GameObject apply(GameObject original, GizmoAxis axis, double delta, TransformSpace space, three.Object3D? object3d) {
     var transform = original.getComponent<TransformComponent>();
     if (transform == null) return original;
     
