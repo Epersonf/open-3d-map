@@ -7,11 +7,13 @@ import 'model_manager.dart';
 
 class SceneManager {
   final three.Scene scene;
+  final three.Camera camera;
   final ModelManager modelManager;
   final Map<String, SceneObject> _sceneObjects = {};
 
   SceneManager({
     required this.scene,
+    required this.camera,
     required this.modelManager,
   });
 
@@ -110,6 +112,7 @@ class SceneManager {
     return SceneContext(
       parent: sceneObject.object3d!,
       scene: scene,
+      camera: camera,
       modelManager: modelManager,
       projectStore: ProjectStore.instance,
     );
@@ -121,6 +124,7 @@ class SceneManager {
     final context = SceneContext(
       parent: sceneObject.object3d!,
       scene: scene,
+      camera: camera,
       modelManager: modelManager,
       projectStore: ProjectStore.instance,
     );
@@ -199,6 +203,7 @@ class SceneManager {
     final context = SceneContext(
       parent: sceneObject.object3d!,
       scene: scene,
+      camera: camera,
       modelManager: modelManager,
       projectStore: ProjectStore.instance,
     );

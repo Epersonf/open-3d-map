@@ -7,12 +7,14 @@ import 'package:open_3d_mapper/stores/project_store.dart';
 class SceneContext {
   final three.Object3D parent; // O nó pai (o SceneObject wrapper) onde o componente deve se anexar
   final three.Scene scene; // A cena global (caso precise de acesso global)
+  final three.Camera camera;
   final ModelManager modelManager;
   final ProjectStore projectStore;
 
   SceneContext({
     required this.parent,
     required this.scene,
+    required this.camera,
     required this.modelManager,
     required this.projectStore,
   });

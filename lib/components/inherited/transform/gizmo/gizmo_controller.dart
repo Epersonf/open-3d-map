@@ -4,6 +4,7 @@ import 'package:three_js/three_js.dart' as three;
 import '../../../../stores/selection_store.dart';
 import '../../../../stores/project_store.dart';
 import '../../../../stores/tool_store.dart';
+import 'package:open_3d_mapper/core/input/input_manager.dart';
 import 'gizmo_loader.dart';
 import 'gizmo_enums.dart';
 import 'strategies/transform_strategy.dart';
@@ -12,9 +13,25 @@ import 'strategies/rotate_strategy.dart';
 import 'strategies/scale_strategy.dart';
 
 class GizmoController {
-  final three.ThreeJS threeJs;
+  // Singleton
+  static final GizmoController instance = GizmoController._();
+  GizmoController._() {
+    // Se registra para receber inputs globais assim que nasce
+    InputManager.instance.registerPriorityHandler(
+      onDown: _onPointerDown,
+      onMove: _onPointerMove,
+      onUp: _onPointerUp,
+    );
+    ToolStore.instance.addListener(_updateVisuals);
+  }
+
+  three.Scene? _scene;
+  three.Camera? _camera;
   GizmoAssets? _gizmoAssets;
   
+  // Flag para evitar recarregar assets múltiplas vezes
+  bool _initialized = false;
+
   final Map<GizmoMode, TransformStrategy> _strategies = {
     GizmoMode.translate: TranslateStrategy(),
     GizmoMode.rotate: RotateStrategy(),
@@ -23,37 +40,53 @@ class GizmoController {
   
   GizmoAxis? _activeAxis; 
   bool get isDragging => _activeAxis != null;
+  
   double _lastMouseX = 0;
   double _lastMouseY = 0;
 
   final three.Raycaster _raycaster = three.Raycaster();
   final three.Vector2 _mouse = three.Vector2(0, 0);
-  late final VoidCallback _toolStoreListener;
 
-  GizmoController(this.threeJs) {
-    _toolStoreListener = () => update();
-    ToolStore.instance.addListener(_toolStoreListener);
+  /// Chamado pelo TransformComponent.onStart
+  void setup(three.Scene scene, three.Camera camera) {
+    _scene = scene;
+    _camera = camera;
+    
+    if (!_initialized) {
+      _loadAllGizmos();
+      _initialized = true;
+    }
   }
 
-  void dispose() {
-    ToolStore.instance.removeListener(_toolStoreListener);
-  }
-
-  Future<void> loadAllGizmos() async {
+  Future<void> _loadAllGizmos() async {
     _gizmoAssets = await GizmoLoader.loadGizmos();
-    if (_gizmoAssets!.move != null) threeJs.scene.add(_gizmoAssets!.move!);
-    if (_gizmoAssets!.rotate != null) threeJs.scene.add(_gizmoAssets!.rotate!);
-    if (_gizmoAssets!.scale != null) threeJs.scene.add(_gizmoAssets!.scale!);
+    // Adiciona na cena se ela já estiver disponível
+    if (_scene != null && _gizmoAssets != null) {
+      if (_gizmoAssets!.move != null) _scene!.add(_gizmoAssets!.move!);
+      if (_gizmoAssets!.rotate != null) _scene!.add(_gizmoAssets!.rotate!);
+      if (_gizmoAssets!.scale != null) _scene!.add(_gizmoAssets!.scale!);
+    }
   }
 
+  /// Chamado a cada frame ou quando a seleção muda (via TransformComponent)
   void update() {
+    _updateVisuals();
+  }
+
+  void _updateVisuals() {
+    if (_scene == null || _camera == null) return;
+
     final selected = SelectionStore.instance.selected;
     if (selected == null) {
       _hideAll();
       return;
     }
+    
     var transform = selected.getComponent<TransformComponent>();
-    if (transform == null) return;
+    if (transform == null) {
+        _hideAll();
+        return;
+    }
     
     _hideAll();
     if (_activeGizmoModel == null) return;
@@ -64,9 +97,7 @@ class GizmoController {
     gizmo.position.setValues(transform.position.x, transform.position.y, transform.position.z);
     
     final space = ToolStore.instance.transformSpace;
-    bool shouldRotateGizmo = space == TransformSpace.local;
-
-    if (shouldRotateGizmo) {
+    if (space == TransformSpace.local) {
       gizmo.rotation.set(
         transform.rotation.x * (3.14159 / 180),
         transform.rotation.y * (3.14159 / 180),
@@ -76,7 +107,7 @@ class GizmoController {
       gizmo.rotation.set(0, 0, 0);
     }
 
-    final distance = threeJs.camera.position.distanceTo(gizmo.position);
+    final distance = _camera!.position.distanceTo(gizmo.position);
     final scale = distance * 0.001;
     gizmo.scale.setValues(scale, scale, scale);
   }
@@ -96,12 +127,16 @@ class GizmoController {
     }
   }
 
-  bool onPointerDown(PointerDownEvent event, BuildContext context, Size size) {
+  // --- Input Implementation (Chamado pelo InputManager) ---
+
+  bool _onPointerDown(PointerDownEvent event, Size viewportSize) {
+    if (_camera == null) return false;
+    
     final gizmo = _activeGizmoModel;
     if (gizmo == null || !gizmo.visible) return false;
 
-    _updateMouseCoordinates(event.localPosition, size);
-    _raycaster.setFromCamera(_mouse, threeJs.camera);
+    _updateMouseCoordinates(event.localPosition, viewportSize);
+    _raycaster.setFromCamera(_mouse, _camera!);
 
     final intersects = _raycaster.intersectObject(gizmo, true);
 
@@ -111,13 +146,13 @@ class GizmoController {
         _activeAxis = object?.userData['gizmoAxis'] as GizmoAxis;
         _lastMouseX = event.localPosition.dx;
         _lastMouseY = event.localPosition.dy;
-        return true; 
+        return true; // Consumiu o evento
       }
     }
     return false;
   }
 
-  void onPointerMove(PointerMoveEvent event) {
+  void _onPointerMove(PointerMoveEvent event) {
      if (_activeAxis == null || SelectionStore.instance.selected == null) return;
 
      final dx = event.position.dx - _lastMouseX;
@@ -144,7 +179,7 @@ class GizmoController {
      }
   }
 
-  void onPointerUp() {
+  void _onPointerUp() {
     _activeAxis = null;
   }
 

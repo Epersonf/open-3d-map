@@ -4,6 +4,8 @@ import 'package:open_3d_mapper/components/inherited/transform/transform_inspecto
 import 'package:open_3d_mapper/domain/general/vec3.dart';
 import '../../../domain/scene/game_component.dart';
 import '../../../domain/scene/scene_context.dart';
+// Import do Gizmo Controller
+import 'package:open_3d_mapper/components/inherited/transform/gizmo/gizmo_controller.dart';
 
 part 'transform_component.g.dart';
 
@@ -54,11 +56,14 @@ class TransformComponent extends GameComponent {
   @override
   void onStart(SceneContext owner) {
     _applyTransform(owner);
+    // Configura o GizmoController com a cena e câmera atuais
+    GizmoController.instance.setup(owner.scene, owner.camera);
   }
 
   @override
   void onUpdate(SceneContext owner, double dt) {
     _applyTransform(owner);
+    GizmoController.instance.update();
   }
 
   @override
@@ -85,5 +90,10 @@ class TransformComponent extends GameComponent {
   @override
   Widget inspectorWidget() {
     return TransformInspector();
+  }
+
+  @override
+  void onSelected(SceneContext owner) {
+    GizmoController.instance.update();
   }
 }

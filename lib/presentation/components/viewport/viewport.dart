@@ -11,8 +11,7 @@ import '../../../stores/tool_store.dart';
 import '../../../stores/camera_store.dart'; // Camera focus bridge
 import '../../../domain/scene/game_object.dart';
 import 'controllers/selection_controller.dart';
-// ATENÇÃO: Gizmo movido para o componente de Transform
-import 'package:open_3d_mapper/components/inherited/transform/gizmo/gizmo_controller.dart';
+import 'package:open_3d_mapper/core/input/input_manager.dart';
 import 'managers/scene_manager.dart';
 import 'managers/model_manager.dart';
 
@@ -29,7 +28,6 @@ class _Viewport3DState extends State<Viewport3D> {
   late SceneManager sceneManager;
   late ModelManager modelManager;
   SelectionController? selectionController;
-  GizmoController? gizmoController;
   // Indica que a cena ThreeJS foi inicializada e `threeJs.camera` está disponível
   bool _ready = false;
   late FocusNode _focusNode;
@@ -127,9 +125,6 @@ class _Viewport3DState extends State<Viewport3D> {
               // Segurança: não tente selecionar antes da cena estar pronta
               if (!_ready) return;
 
-              // If we're currently dragging the gizmo, ignore tap selection
-              if (gizmoController?.isDragging == true) return;
-
               selectionController?.onTapDown(details, _viewportKey.currentContext!);
             },
             child: Listener(
@@ -137,36 +132,34 @@ class _Viewport3DState extends State<Viewport3D> {
                 // Não processa interações de câmera antes da cena estar pronta
                 if (!_ready) return;
 
-                // 1) Try the gizmo first (instantaneous raw event)
-                  // Garante foco ao clicar na área 3D
-                  if (!_focusNode.hasFocus) {
-                    _focusNode.requestFocus();
-                  }
+                // Garante foco ao clicar na área 3D
+                if (!_focusNode.hasFocus) {
+                  _focusNode.requestFocus();
+                }
 
-                  final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
-                final hitGizmo = renderBox != null
-                    ? (gizmoController?.onPointerDown(e, _viewportKey.currentContext!, renderBox.size) ?? false)
+                final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+                final handled = renderBox != null
+                    ? InputManager.instance.handlePointerDown(e, renderBox.size)
                     : false;
 
-                if (hitGizmo) return;
+                if (handled) return;
 
-                // 2) Otherwise, handle camera interaction
+                // Ninguém consumiu, delega para câmera
                 freeCam.onPointerDown(e);
               },
               onPointerUp: (e) {
                 if (!_ready) return;
 
-                gizmoController?.onPointerUp();
+                InputManager.instance.handlePointerUp();
                 freeCam.onPointerUp(e);
               },
               onPointerMove: (event) {
                 if (!_ready) return;
 
-                if (gizmoController?.isDragging == true) {
-                  gizmoController?.onPointerMove(event);
-                  return;
-                }
+                // Distribui para o InputManager (gizmos, etc)
+                InputManager.instance.handlePointerMove(event);
 
+                // Continua com câmera/hover
                 freeCam.onPointerMove(event);
                 selectionController?.onPointerMove(event, _viewportKey.currentContext!);
               },
@@ -217,6 +210,7 @@ class _Viewport3DState extends State<Viewport3D> {
     } catch (_) {}
     sceneManager = SceneManager(
       scene: threeJs.scene,
+      camera: threeJs.camera,
       modelManager: modelManager,
     );
 
@@ -225,16 +219,7 @@ class _Viewport3DState extends State<Viewport3D> {
       sceneManager: sceneManager,
     );
 
-    // Initialize Gizmo controller and load all gizmo variants
-    gizmoController = GizmoController(threeJs);
-    gizmoController!.loadAllGizmos();
-
-    threeJs.addAnimationEvent((dt) {
-      gizmoController?.update();
-    });
-
-    // Listen for tool changes to update gizmo immediately
-    ToolStore.instance.addListener(_onToolChanged);
+    // Note: GizmoController is initialized by TransformComponent when components start.
 
     // Ouvir mudanças no projeto
     _projectListener = updateSceneFromProject;
@@ -277,7 +262,7 @@ class _Viewport3DState extends State<Viewport3D> {
   }
 
   void _onToolChanged() {
-    gizmoController?.update();
+    // kept for compatibility; InputManager/Gizmo will react via ToolStore listener internally
   }
 
   /// Método centralizado para gerenciar input de teclado
