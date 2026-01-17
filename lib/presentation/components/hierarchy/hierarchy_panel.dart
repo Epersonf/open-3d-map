@@ -14,19 +14,46 @@ class HierarchyPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text('Hierarchy', style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.bold)),
+          // --- Header com Botão de Adicionar ---
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.white10)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Hierarchy',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 20, color: Colors.white70),
+                  tooltip: 'Create Empty Object',
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    // Cria um objeto vazio na raiz (parentId: null)
+                    ProjectStore.instance.createEmpty();
+                  },
+                ),
+              ],
+            ),
           ),
+          
+          // --- Lista de Objetos ---
           Expanded(
             child: DragTarget<String>(
               onWillAccept: (_) => true,
               onAccept: (childId) {
+                // Arrastar para o fundo do painel move para a raiz
                 ProjectStore.instance.reparentObject(childId, null);
               },
               builder: (context, candidate, rejected) {
-                // FIX: Usamos AnimatedBuilder para escutar o ProjectStore (ChangeNotifier).
-                // Isso garante que quando o projeto for carregado (setProject), este widget reconstrua.
                 return AnimatedBuilder(
                   animation: ProjectStore.instance,
                   builder: (context, _) {
@@ -38,11 +65,8 @@ class HierarchyPanel extends StatelessWidget {
 
                     final scene = project.scenes.first;
                     
-                    // Mantemos o Observer interno para escutar mudanças granulares na lista (ObservableList)
-                    // caso algo mude a lista sem disparar o notifyListeners do store.
                     return Observer(
                       builder: (_) {
-                        // Acessar .objects (que é ObservableList) garante a reatividade fina
                         final roots = scene.objects.where((obj) => obj.parentId == null).toList();
 
                         if (roots.isEmpty) {

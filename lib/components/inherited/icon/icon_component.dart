@@ -34,12 +34,10 @@ class IconComponent implements GameComponent {
 
   @override
   void onStart(SceneContext owner) async {
-    // If we already have a sprite (stolen via onDidUpdate), reparent and apply props
     if (_sprite != null) {
       if (_sprite!.parent != owner.parent) {
         owner.parent.add(_sprite!);
       }
-      _applyProperties();
       return;
     }
 
@@ -75,41 +73,24 @@ class IconComponent implements GameComponent {
       _sprite = null;
     }
   }
-  // --- Lógica de Seleção Encapsulada ---
 
   @override
-  void onSelected(SceneContext owner) {
-    if (_sprite is three.Sprite) {
-      (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFAA00);
-    }
-  }
+  void onSelected(SceneContext owner) {}
 
   @override
-  void onDeselected(SceneContext owner) {
-    if (_sprite is three.Sprite) {
-      (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFFFFF);
-    }
-  }
+  void onDeselected(SceneContext owner) {}
 
   @override
   bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
     if (oldComponent is IconComponent && oldComponent.iconName == iconName) {
       _sprite = oldComponent._sprite;
       oldComponent._sprite = null;
-      _applyProperties();
       if (_sprite != null && _sprite!.parent != owner.parent) {
         owner.parent.add(_sprite!);
       }
       return true;
     }
     return false;
-  }
-
-  void _applyProperties() {
-    if (_sprite is three.Sprite) {
-      // ensure default tint
-      (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFFFFF);
-    }
   }
 
   @override
