@@ -8,21 +8,30 @@ class ComponentRegister {
   static void registerAll() {
     ComponentRegistry.register(
       TagsComponent.typeId,
-      (json) => TagsComponent.fromJson(json),
+      displayName: 'Tags & Layers',
+      fromJson: (json) => TagsComponent.fromJson(json),
+      createDefault: () => TagsComponent(),
     );
 
     ComponentRegistry.register(
       TransformComponent.typeId,
-      (json) => TransformComponent.fromJson(json),
+      displayName: 'Transform',
+      fromJson: (json) => TransformComponent.fromJson(json),
+      createDefault: () => TransformComponent.defaultValue(),
     );
+
     ComponentRegistry.register(
       MeshComponent.typeId,
-      (json) => MeshComponent.fromJson(json),
+      displayName: 'Mesh Renderer',
+      fromJson: (json) => MeshComponent.fromJson(json),
+      createDefault: () => MeshComponent(visibleInRuntime: true),
     );
 
     ComponentRegistry.register(
       IconComponent.typeId,
-      (json) => IconComponent.fromJson(json),
+      displayName: 'Icon Visualization',
+      fromJson: (json) => IconComponent.fromJson(json),
+      createDefault: () => IconComponent(iconName: 'help'),
     );
   }
 }

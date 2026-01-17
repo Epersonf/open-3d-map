@@ -47,7 +47,10 @@ class _TagsInspectorState extends State<TagsInspector> {
       if (_currentSelectedId != sel.id) {
         _currentSelectedId = sel.id;
         _tags.clear();
-        sel.tags.forEach((k, v) => _tags.add(Tag(k, v)));
+        var tagsComp = sel.getComponent<TagsComponent>();
+        if (tagsComp != null) {
+          tagsComp.tags.forEach((k, v) => _tags.add(Tag(k, v)));
+        }
       }
 
       return Container(

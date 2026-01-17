@@ -1,7 +1,5 @@
 import 'package:mobx/mobx.dart';
 import 'game_component.dart';
-import '../../components/inherited/transform/transform_component.dart';
-import '../../components/inherited/tags/tags_component.dart';
 
 class GameObject {
   final String id;
@@ -23,13 +21,7 @@ class GameObject {
     List<GameObject>? children,
   })  : components = components ?? [],
         children = ObservableList.of(children ?? []) {
-
-    if (getComponent<TransformComponent>() == null) {
-      this.components.add(TransformComponent.defaultValue());
-    }
   }
-
-  Map<String, String> get tags => getComponent<TagsComponent>()?.tags ?? {};
 
   // --- Component helpers ---
   T? getComponent<T extends GameComponent>() {
@@ -50,10 +42,6 @@ class GameObject {
   void setComponent<T extends GameComponent>(T component) {
     components.removeWhere((c) => c.id == component.id);
     components.add(component);
-    // sync tags into legacy map for compatibility
-    if (component is TagsComponent) {
-      // nothing else needed since getter reads from component
-    }
   }
 
   /// Return a new GameObject with the given component replaced/added (immutable helper)
