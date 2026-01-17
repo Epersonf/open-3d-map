@@ -46,9 +46,10 @@ class _HierarchyNodeState extends State<HierarchyNode> {
       final children = widget.node.children;
       final hasChildren = children.isNotEmpty;
 
-      // FIX: Ler o SelectionStore aqui, dentro do escopo direto do Observer
       final selectedId = SelectionStore.instance.selected?.id;
       final isSelected = selectedId == widget.node.id;
+
+      final isSpatial = widget.node.getComponentById('transform') != null;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +76,9 @@ class _HierarchyNodeState extends State<HierarchyNode> {
                 height: 28,
                 color: _isHovering
                     ? Colors.blue.withOpacity(0.3)
-                    : (isSelected ? Colors.blue.withOpacity(0.2) : Colors.transparent),
+                    : (isSelected
+                        ? Colors.blue.withOpacity(0.2)
+                        : Colors.transparent),
                 padding: EdgeInsets.only(left: widget.level * 16.0),
                 child: Row(
                   children: [
@@ -88,21 +91,33 @@ class _HierarchyNodeState extends State<HierarchyNode> {
                         height: 28,
                         child: hasChildren
                             ? Icon(
-                                _isExpanded ? Icons.arrow_drop_down : Icons.arrow_right,
+                                _isExpanded
+                                    ? Icons.arrow_drop_down
+                                    : Icons.arrow_right,
                                 size: 18,
                                 color: Colors.grey,
                               )
                             : null,
                       ),
                     ),
-                    const Icon(Icons.videogame_asset, size: 16, color: Colors.white70),
+                    Icon(
+                      isSpatial ? Icons.view_in_ar : Icons.circle_outlined,
+                      size: 16,
+                      color: isSpatial
+                          ? Colors.blueAccent.withOpacity(0.7)
+                          : Colors.white38,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         widget.node.name,
                         style: TextStyle(
-                          color: isSelected ? Colors.blue[100] : Colors.white,
+                          color: isSelected
+                              ? Colors.blue[100]
+                              : (isSpatial ? Colors.white : Colors.white70),
                           fontSize: 13,
+                          fontStyle:
+                              isSpatial ? FontStyle.normal : FontStyle.italic,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -120,7 +135,8 @@ class _HierarchyNodeState extends State<HierarchyNode> {
                 onSecondaryTapUp: (details) {
                   // Select then open context menu
                   SelectionStore.instance.select(widget.node);
-                  showHierarchyContextMenu(context, details.globalPosition, widget.node);
+                  showHierarchyContextMenu(
+                      context, details.globalPosition, widget.node);
                 },
                 child: content,
               );
@@ -132,7 +148,8 @@ class _HierarchyNodeState extends State<HierarchyNode> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     color: Colors.black54,
-                    child: Text(widget.node.name, style: const TextStyle(color: Colors.white)),
+                    child: Text(widget.node.name,
+                        style: const TextStyle(color: Colors.white)),
                   ),
                 ),
                 child: content,
