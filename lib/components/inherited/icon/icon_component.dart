@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:open_3d_mapper/domain/scene/game_object/game_object.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../game_component.dart';
 import '../../../domain/scene/scene_context.dart';
@@ -10,7 +9,7 @@ import 'icon_inspector.dart';
 part 'icon_component.g.dart';
 
 @JsonSerializable()
-class IconComponent implements GameComponent {
+class IconComponent extends GameComponent {
   static const String typeId = 'icon';
 
   @override
@@ -76,12 +75,6 @@ class IconComponent implements GameComponent {
   }
 
   @override
-  void onSelected(SceneContext owner) {}
-
-  @override
-  void onDeselected(SceneContext owner) {}
-
-  @override
   bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
     if (oldComponent is IconComponent && oldComponent.iconName == iconName) {
       _sprite = oldComponent._sprite;
@@ -92,13 +85,5 @@ class IconComponent implements GameComponent {
       return true;
     }
     return false;
-  }
-
-  @override
-  void onUpdate(owner, double dt) {}
-
-  @override
-  GameComponent onReparent(GameObject self, GameObject? oldParent, GameObject? newParent, Map<String, GameObject> objectLookup) {
-    return this;
   }
 }

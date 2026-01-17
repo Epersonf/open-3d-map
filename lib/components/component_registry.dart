@@ -1,6 +1,6 @@
 import 'package:open_3d_mapper/components/game_component.dart';
 
-import 'component_definition.dart';
+import '../domain/scene/component_definition.dart';
 
 class ComponentRegistry {
   static final Map<String, ComponentDefinition> _definitions = {};

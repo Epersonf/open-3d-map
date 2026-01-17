@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:open_3d_mapper/domain/scene/game_object/game_object.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../game_component.dart';
 import '../../../domain/scene/scene_context.dart';
@@ -10,7 +9,7 @@ import 'mesh_inspector.dart';
 part 'mesh_component.g.dart';
 
 @JsonSerializable()
-class MeshComponent implements GameComponent {
+class MeshComponent extends GameComponent {
   static const String typeId = 'mesh';
 
   @override
@@ -19,9 +18,6 @@ class MeshComponent implements GameComponent {
   final String? assetId;
   final bool visibleInRuntime;
 
-  // --- Runtime Cache ---
-  // Apenas guardamos o objeto 3D. Removemos o cache de materiais
-  // para evitar referências mortas.
   @JsonKey(includeFromJson: false, includeToJson: false)
   three.Object3D? _meshObject;
 
@@ -46,7 +42,6 @@ class MeshComponent implements GameComponent {
 
   @override
   void onStart(dynamic owner) async {
-    // 1. Hot Reload Manual
     if (_meshObject != null) {
       if (_meshObject!.parent != owner.parent) {
         owner.parent.add(_meshObject!);
@@ -103,19 +98,5 @@ class MeshComponent implements GameComponent {
       _meshObject!.removeFromParent();
       _meshObject = null;
     }
-  }
-
-  @override
-  void onSelected(SceneContext owner) {}
-
-  @override
-  void onDeselected(SceneContext owner) {}
-
-  @override
-  void onUpdate(owner, double dt) {}
-
-  @override
-  GameComponent onReparent(GameObject self, GameObject? oldParent, GameObject? newParent, Map<String, GameObject> objectLookup) {
-    return this;
   }
 }
