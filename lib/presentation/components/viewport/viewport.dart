@@ -10,12 +10,10 @@ import '../../../stores/selection_store.dart';
 import '../../../stores/tool_store.dart';
 import '../../../stores/camera_store.dart'; // Camera focus bridge
 import '../../../domain/scene/game_object.dart';
-import '../../../domain/asset/asset.dart';
 import 'controllers/selection_controller.dart';
 import 'controllers/gizmo_controller.dart';
 import 'managers/scene_manager.dart';
 import 'managers/model_manager.dart';
-import 'objects/scene_object.dart';
 
 class Viewport3D extends StatefulWidget {
   const Viewport3D({super.key});
@@ -33,6 +31,7 @@ class _Viewport3DState extends State<Viewport3D> {
   GizmoController? gizmoController;
   // Indica que a cena ThreeJS foi inicializada e `threeJs.camera` está disponível
   bool _ready = false;
+  late FocusNode _focusNode;
   
   VoidCallback? _projectListener;
   // Listener para requisições de foco da câmera
@@ -43,6 +42,10 @@ class _Viewport3DState extends State<Viewport3D> {
   @override
   void initState() {
     super.initState();
+
+    // 2. INICIALIZE AQUI
+    _focusNode = FocusNode();
+    // Nota: não chamamos requestFocus aqui — usaremos `autofocus` no Focus widget
 
     threeJs = three.ThreeJS(
       setup: setupScene,
@@ -62,6 +65,8 @@ class _Viewport3DState extends State<Viewport3D> {
 
   @override
   void dispose() {
+    // 3. DESCARTE AQUI
+    _focusNode.dispose();
     if (_projectListener != null) {
       ProjectStore.instance.removeListener(_projectListener!);
       _projectListener = null;
@@ -87,9 +92,14 @@ class _Viewport3DState extends State<Viewport3D> {
 
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: FocusNode()..requestFocus(),
-      onKeyEvent: _onKey,
+    // Usa `Focus` em vez de `KeyboardListener` para usar o HardwareKeyboard
+    return Focus(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        _onKey(event);
+        return KeyEventResult.ignored;
+      },
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Atualizar o tamanho do renderizador e aspect ratio da câmera
@@ -127,7 +137,12 @@ class _Viewport3DState extends State<Viewport3D> {
                 if (!_ready) return;
 
                 // 1) Try the gizmo first (instantaneous raw event)
-                final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+                  // Garante foco ao clicar na área 3D
+                  if (!_focusNode.hasFocus) {
+                    _focusNode.requestFocus();
+                  }
+
+                  final renderBox = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
                 final hitGizmo = renderBox != null
                     ? (gizmoController?.onPointerDown(e, _viewportKey.currentContext!, renderBox.size) ?? false)
                     : false;

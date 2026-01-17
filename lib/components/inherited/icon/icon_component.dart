@@ -33,8 +33,15 @@ class IconComponent implements GameComponent {
   Widget inspectorWidget() => const IconInspector();
 
   @override
-  void onStart(dynamic owner) async {
-    if (owner is! SceneContext) return;
+  void onStart(SceneContext owner) async {
+    // If we already have a sprite (stolen via onDidUpdate), reparent and apply props
+    if (_sprite != null) {
+      if (_sprite!.parent != owner.parent) {
+        owner.parent.add(_sprite!);
+      }
+      _applyProperties();
+      return;
+    }
 
     IconData iconData = Icons.help_outline;
     switch (iconName) {
@@ -58,12 +65,11 @@ class IconComponent implements GameComponent {
 
     _sprite = three.Sprite(material);
     _sprite!.scale.setValues(0.5, 0.5, 0.5);
-    
     owner.parent.add(_sprite!);
   }
 
   @override
-  void onDestroy(dynamic owner) {
+  void onDestroy(SceneContext owner) {
     if (_sprite != null) {
       _sprite!.removeFromParent();
       _sprite = null;
@@ -72,15 +78,36 @@ class IconComponent implements GameComponent {
   // --- Lógica de Seleção Encapsulada ---
 
   @override
-  void onSelected(dynamic owner) {
+  void onSelected(SceneContext owner) {
     if (_sprite is three.Sprite) {
       (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFAA00);
     }
   }
 
   @override
-  void onDeselected(dynamic owner) {
+  void onDeselected(SceneContext owner) {
     if (_sprite is three.Sprite) {
+      (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFFFFF);
+    }
+  }
+
+  @override
+  bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
+    if (oldComponent is IconComponent && oldComponent.iconName == iconName) {
+      _sprite = oldComponent._sprite;
+      oldComponent._sprite = null;
+      _applyProperties();
+      if (_sprite != null && _sprite!.parent != owner.parent) {
+        owner.parent.add(_sprite!);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  void _applyProperties() {
+    if (_sprite is three.Sprite) {
+      // ensure default tint
       (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFFFFF);
     }
   }

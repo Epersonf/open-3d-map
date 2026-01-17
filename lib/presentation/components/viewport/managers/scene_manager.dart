@@ -33,49 +33,86 @@ class SceneManager {
   }
 
   Future<void> updateSceneObject(GameObject gameObject) async {
-    SceneObject? sceneObject = _sceneObjects[gameObject.id];
-    if (sceneObject == null) {
-      // create container if missing
-      final group = three.Group();
-      group.name = gameObject.name;
-      group.userData['gameObjectId'] = gameObject.id;
+    final newGameObject = gameObject;
+    SceneObject? sceneObject = _sceneObjects[newGameObject.id];
 
-      sceneObject = SceneObject(id: gameObject.id, gameObject: gameObject, object3d: group);
-      _sceneObjects[gameObject.id] = sceneObject;
+    if (sceneObject == null) {
+      // Initial creation
+      final group = three.Group();
+      group.name = newGameObject.name;
+      group.userData['gameObjectId'] = newGameObject.id;
+
+      sceneObject = SceneObject(id: newGameObject.id, gameObject: newGameObject, object3d: group);
+      _sceneObjects[newGameObject.id] = sceneObject;
       scene.add(group);
+
       _initializeComponents(sceneObject);
     } else {
-      // hot-reload components if the gameObject reference changed
-      if (sceneObject.gameObject != gameObject) {
-        _disposeComponents(sceneObject);
-        sceneObject.gameObject = gameObject;
-        sceneObject.object3d!.name = gameObject.name;
-        _initializeComponents(sceneObject);
+      // DIFF + Smart update
+      final oldGameObject = sceneObject.gameObject;
+      sceneObject.gameObject = newGameObject;
+      sceneObject.object3d!.name = newGameObject.name;
+
+      final context = _createContext(sceneObject);
+
+      final oldComps = {for (var c in oldGameObject.components) c.id: c};
+
+      for (final newComp in newGameObject.components) {
+        final oldComp = oldComps[newComp.id];
+
+        if (oldComp != null) {
+          bool updated = false;
+          try {
+            if (oldComp.runtimeType == newComp.runtimeType) {
+              updated = newComp.onDidUpdate(oldComp, context);
+            }
+          } catch (e) {
+            // ignore
+          }
+
+          if (!updated) {
+            try { oldComp.onDestroy(context); } catch (_) {}
+            try { newComp.onStart(context); } catch (_) {}
+          }
+
+          oldComps.remove(newComp.id);
+        } else {
+          // New component
+          try { newComp.onStart(context); } catch (_) {}
+        }
+
+        // preserve selection visual state
+        if (_currentSelectionId == newGameObject.id) {
+          try { newComp.onSelected(context); } catch (_) {}
+        }
+      }
+
+      // Destroy any removed components
+      for (final removed in oldComps.values) {
+        try { removed.onDestroy(context); } catch (_) {}
       }
     }
 
-    // update transform and parent
-    sceneObject.updateTransform();
-    _updateParentRelationship(sceneObject, gameObject.parentId);
+    // Parenting handled below; TransformComponent is responsible for applying transforms
+    _updateParentRelationship(sceneObject, newGameObject.parentId);
   }
 
   void _initializeComponents(SceneObject sceneObject) {
     if (sceneObject.object3d == null) return;
+    final context = _createContext(sceneObject);
 
-    final context = SceneContext(
+    for (final component in sceneObject.gameObject.components) {
+      try { component.onStart(context); } catch (_) {}
+    }
+  }
+
+  SceneContext _createContext(SceneObject sceneObject) {
+    return SceneContext(
       parent: sceneObject.object3d!,
       scene: scene,
       modelManager: modelManager,
       projectStore: ProjectStore.instance,
     );
-
-    for (final component in sceneObject.gameObject.components) {
-      try {
-        component.onStart(context);
-      } catch (e) {
-        // ignore component errors to keep editor stable
-      }
-    }
   }
 
   void _disposeComponents(SceneObject sceneObject) {

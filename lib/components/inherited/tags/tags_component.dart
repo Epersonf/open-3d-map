@@ -44,4 +44,9 @@ class TagsComponent implements GameComponent {
   
   @override
   void onSelected(owner) {}
+  
+  @override
+  bool onDidUpdate(GameComponent oldComponent, owner) {
+    return false;
+  }
 }

@@ -73,7 +73,6 @@ class SelectionController {
     final intersects = _raycaster.intersectObjects(intersectedObjects, true);
 
     if (intersects.isNotEmpty) {
-      // O primeiro item da lista é sempre o mais próximo da câmera
       _handleIntersection(intersects.first.object!);
     } else {
       _handleNoIntersection();
@@ -83,8 +82,6 @@ class SelectionController {
   void _handleIntersection(three.Object3D clickedObject) {
     var currentObject = clickedObject;
     
-    // Sobe na hierarquia até achar o ID do GameObject
-    // Adicionamos um limite de segurança (currentObject.parent != null) para não crashar na raiz
     while (currentObject.userData['gameObjectId'] == null && currentObject.parent != null) {
       currentObject = currentObject.parent!;
     }
@@ -95,9 +92,6 @@ class SelectionController {
 
       if (gameObject != null) {
         SelectionStore.instance.select(gameObject);
-        // Não precisamos chamar highlightObject aqui manualmente se o Reaction no Viewport já faz isso
-        // Mas mal não faz manter
-        // sceneManager.highlightObject(gameObject.id); 
         return;
       }
     }
@@ -107,6 +101,5 @@ class SelectionController {
 
   void _handleNoIntersection() {
     SelectionStore.instance.clear();
-    // sceneManager.highlightObject(null); // Idem acima
   }
 }

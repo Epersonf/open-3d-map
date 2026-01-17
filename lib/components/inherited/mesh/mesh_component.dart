@@ -18,12 +18,16 @@ class MeshComponent implements GameComponent {
   final String? assetId;
   final bool visibleInRuntime;
 
+  // --- Runtime Cache ---
+  // Apenas guardamos o objeto 3D. Removemos o cache de materiais
+  // para evitar referências mortas.
   @JsonKey(includeFromJson: false, includeToJson: false)
   three.Object3D? _meshObject;
 
   MeshComponent({this.assetId, this.visibleInRuntime = true});
 
-  factory MeshComponent.fromJson(Map<String, dynamic> json) => _$MeshComponentFromJson(json);
+  factory MeshComponent.fromJson(Map<String, dynamic> json) =>
+      _$MeshComponentFromJson(json);
 
   @override
   Map<String, dynamic> toJson() => _$MeshComponentToJson(this);
@@ -41,6 +45,14 @@ class MeshComponent implements GameComponent {
 
   @override
   void onStart(dynamic owner) async {
+    // 1. Hot Reload Manual
+    if (_meshObject != null) {
+      if (_meshObject!.parent != owner.parent) {
+        owner.parent.add(_meshObject!);
+      }
+      return;
+    }
+
     if (owner is! SceneContext || assetId == null) return;
 
     final project = owner.projectStore.project;
@@ -54,49 +66,49 @@ class MeshComponent implements GameComponent {
 
     if (asset.path.isEmpty) return;
 
-    final model = await owner.modelManager.loadModel(assetId!, rootPath, asset.path);
+    final model =
+        await owner.modelManager.loadModel(assetId!, rootPath, asset.path);
+
     if (model != null) {
-      _meshObject = model.clone();
-      _meshObject!.visible = visibleInRuntime;
+      _meshObject = model.clone(true);
+      _applyProperties();
       owner.parent.add(_meshObject!);
     }
   }
 
   @override
-  void onDestroy(dynamic owner) {
+  bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
+    if (oldComponent is MeshComponent && oldComponent.assetId == assetId) {
+      _meshObject = oldComponent._meshObject;
+
+      oldComponent._meshObject = null;
+
+      _applyProperties();
+
+      return true;
+    }
+    return false;
+  }
+
+  void _applyProperties() {
+    if (_meshObject != null) {
+      _meshObject!.visible = visibleInRuntime;
+    }
+  }
+
+  @override
+  void onDestroy(SceneContext owner) {
     if (_meshObject != null) {
       _meshObject!.removeFromParent();
       _meshObject = null;
     }
   }
-  // --- Lógica de Seleção Encapsulada ---
 
   @override
-  void onSelected(dynamic owner) {
-    if (_meshObject == null) return;
-    _setHighlight(true);
-  }
+  void onSelected(SceneContext owner) {}
 
   @override
-  void onDeselected(dynamic owner) {
-    if (_meshObject == null) return;
-    _setHighlight(false);
-  }
-
-  void _setHighlight(bool active) {
-    _meshObject!.traverse((object) {
-      if (object is three.Mesh && object.material is three.MeshStandardMaterial) {
-        final material = object.material as three.MeshStandardMaterial;
-        if (active) {
-          material.emissive = three.Color.fromHex32(0x444400);
-          material.emissiveIntensity = 0.5;
-        } else {
-          material.emissive = three.Color.fromHex32(0x000000);
-          material.emissiveIntensity = 0.0;
-        }
-      }
-    });
-  }
+  void onDeselected(SceneContext owner) {}
 
   @override
   void onUpdate(owner, double dt) {}

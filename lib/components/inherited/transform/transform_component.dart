@@ -3,6 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:open_3d_mapper/components/inherited/transform/transform_inspector.dart';
 import 'package:open_3d_mapper/domain/general/vec3.dart';
 import '../../../domain/scene/game_component.dart';
+import '../../../domain/scene/scene_context.dart';
 
 part 'transform_component.g.dart';
 
@@ -51,13 +52,34 @@ class TransformComponent extends GameComponent {
   }
 
   @override
-  void onStart(dynamic owner) {
-    // Default: no-op
+  void onStart(SceneContext owner) {
+    _applyTransform(owner);
   }
 
   @override
-  void onUpdate(dynamic owner, double dt) {
-    // Default: no-op
+  void onUpdate(SceneContext owner, double dt) {
+    _applyTransform(owner);
+  }
+
+  @override
+  bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
+    _applyTransform(owner);
+    return true;
+  }
+
+  void _applyTransform(SceneContext owner) {
+    final object3d = owner.parent;
+
+    object3d.position.setValues(position.x, position.y, position.z);
+
+    const deg2rad = 3.14159265359 / 180.0;
+    object3d.rotation.set(
+      rotation.x * deg2rad,
+      rotation.y * deg2rad,
+      rotation.z * deg2rad,
+    );
+
+    object3d.scale.setValues(scale.x, scale.y, scale.z);
   }
 
   @override

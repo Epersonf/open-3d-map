@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_3d_mapper/domain/scene/scene_context.dart';
 
 // O contrato para qualquer componente
 abstract class GameComponent {
@@ -11,19 +12,25 @@ abstract class GameComponent {
 
   // --- Ciclo de vida ---
   /// Chamado quando o componente é inicializado ou adicionado à cena
-  void onStart(dynamic owner) {}
+  void onStart(SceneContext owner) {}
 
   /// Chamado a cada frame do loop (delta time em segundos)
-  void onUpdate(dynamic owner, double dt) {}
+  void onUpdate(SceneContext owner, double dt) {}
 
   /// Chamado quando o componente/owner é destruído
-  void onDestroy(dynamic owner) {}
+  void onDestroy(SceneContext owner) {}
+
+  /// Chamado quando o componente é substituído por uma nova versão (ex: edição no inspector).
+  /// Permite transferir recursos pesados (Meshes, Texturas) do [oldComponent] para este,
+  /// evitando recarregamento desnecessário.
+  /// Retorna true se o estado foi transferido com sucesso.
+  bool onDidUpdate(GameComponent oldComponent, SceneContext owner) => false;
 
   /// Chamado quando o GameObject dono deste componente é selecionado
-  void onSelected(dynamic owner) {}
+  void onSelected(SceneContext owner) {}
 
   /// Chamado quando o GameObject dono deste componente é desmarcado
-  void onDeselected(dynamic owner) {}
+  void onDeselected(SceneContext owner) {}
 
   Widget inspectorWidget() {
     return Text('No inspector for $id');
