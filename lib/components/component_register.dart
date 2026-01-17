@@ -3,6 +3,7 @@ import 'package:open_3d_mapper/components/inherited/transform/transform_componen
 import 'package:open_3d_mapper/components/inherited/mesh/mesh_component.dart';
 import 'package:open_3d_mapper/components/inherited/icon/icon_component.dart';
 import 'package:open_3d_mapper/components/inherited/light/light_component.dart';
+import 'package:open_3d_mapper/components/inherited/collider/collider_component.dart';
 import 'package:open_3d_mapper/components/component_registry.dart';
 
 class ComponentRegister {
@@ -40,6 +41,14 @@ class ComponentRegister {
       displayName: 'Light Source',
       fromJson: (json) => LightComponent.fromJson(json),
       createDefault: () => LightComponent(),
+    );
+
+    // --- Register Collider ---
+    ComponentRegistry.register(
+      ColliderComponent.typeId,
+      displayName: 'Collider',
+      fromJson: (json) => ColliderComponent.fromJson(json),
+      createDefault: () => ColliderComponent.createDefault(),
     );
   }
 }
