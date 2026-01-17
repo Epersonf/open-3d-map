@@ -82,6 +82,12 @@ class MeshComponent extends GameComponent {
 
     if (model != null) {
       _meshObject = model.clone(true);
+      // --- CORREÇÃO 1: Tagging ---
+      // Marcamos o objeto 3D com o ID deste tipo de componente.
+      // Isso nos permite encontrá-lo depois, mesmo se perdermos a referência da variável _meshObject.
+      try {
+        _meshObject!.userData['componentType'] = typeId;
+      } catch (_) {}
       _applyProperties();
       
       // Verificação dupla de segurança
@@ -119,6 +125,25 @@ class MeshComponent extends GameComponent {
     if (_meshObject != null) {
       _meshObject!.removeFromParent();
       _meshObject = null;
+      return;
+    }
+
+    // --- CORREÇÃO 2: Limpeza por Tag (Fallback) ---
+    // Se _meshObject for null (porque a instância foi recriada),
+    // procuramos no pai por qualquer filho que tenha a nossa tag.
+    final childrenToRemove = <three.Object3D>[];
+
+    for (final child in owner.parent.children) {
+      try {
+        final data = child.userData;
+        if (data['componentType'] == typeId) {
+          childrenToRemove.add(child);
+        }
+      } catch (_) {}
+    }
+
+    for (final child in childrenToRemove) {
+      child.removeFromParent();
     }
   }
 }
