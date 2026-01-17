@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:open_3d_mapper/stores/selection_store.dart';
 import 'package:open_3d_mapper/stores/project_store.dart';
-import '../../../domain/scene/game_component.dart';
-import '../../../domain/scene/game_object.dart';
+import '../../../domain/scene/component_registry.dart';
+import '../../../domain/scene/game_object/game_object.dart';
 import 'component_section.dart';
 import 'add_component_modal.dart';
 

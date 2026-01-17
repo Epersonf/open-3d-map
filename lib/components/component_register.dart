@@ -2,7 +2,7 @@ import 'package:open_3d_mapper/components/inherited/tags/tags_component.dart';
 import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
 import 'package:open_3d_mapper/components/inherited/mesh/mesh_component.dart';
 import 'package:open_3d_mapper/components/inherited/icon/icon_component.dart';
-import 'package:open_3d_mapper/domain/scene/game_component.dart';
+import 'package:open_3d_mapper/domain/scene/component_registry.dart';
 
 class ComponentRegister {
   static void registerAll() {

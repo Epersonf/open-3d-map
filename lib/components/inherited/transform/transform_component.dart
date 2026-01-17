@@ -3,7 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:open_3d_mapper/components/inherited/transform/transform_inspector.dart';
 import 'package:open_3d_mapper/domain/general/vec3.dart';
 import '../../../domain/scene/game_component.dart';
-import '../../../domain/scene/game_object.dart';
+import '../../../domain/scene/game_object/game_object.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../domain/scene/scene_context.dart';
 // Import do Gizmo Controller

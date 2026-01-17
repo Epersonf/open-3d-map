@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobx/mobx.dart';
-import 'game_object.dart';
+import 'game_object/game_object.dart';
 
 part 'scene.g.dart';
 

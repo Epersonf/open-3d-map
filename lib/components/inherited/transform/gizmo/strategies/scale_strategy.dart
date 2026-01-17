@@ -1,6 +1,6 @@
 import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
 import 'package:open_3d_mapper/domain/general/vec3.dart';
-import 'package:open_3d_mapper/domain/scene/game_object.dart';
+import 'package:open_3d_mapper/domain/scene/game_object/game_object.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../../stores/tool_store.dart';
 import '../gizmo_enums.dart';

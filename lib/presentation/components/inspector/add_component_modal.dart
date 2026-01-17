@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../domain/scene/game_component.dart';
+import '../../../domain/scene/component_registry.dart';
 
 class AddComponentModal extends StatefulWidget {
   final List<String> existingComponentIds;

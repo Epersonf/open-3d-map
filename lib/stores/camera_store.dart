@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../domain/scene/game_object.dart';
+import '../domain/scene/game_object/game_object.dart';
 
 class CameraStore extends ChangeNotifier {
   CameraStore._private();

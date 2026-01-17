@@ -9,7 +9,7 @@ import 'package:open_3d_mapper/domain/asset/asset.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import '../domain/project/project.dart';
-import '../domain/scene/game_object.dart';
+import '../domain/scene/game_object/game_object.dart';
 import '../domain/scene/scene.dart';
 import '../stores/selection_store.dart';
 

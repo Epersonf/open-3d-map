@@ -7,7 +7,7 @@ import 'package:three_js/three_js.dart' as three;
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/tool_store.dart';
-import '../../../domain/scene/game_object.dart';
+import '../../../domain/scene/game_object/game_object.dart';
 import 'controllers/selection_controller.dart';
 import 'package:open_3d_mapper/core/input/input_manager.dart';
 import 'managers/scene_manager.dart';

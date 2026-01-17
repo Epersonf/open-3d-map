@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../domain/scene/game_object.dart';
+import '../../../domain/scene/game_object/game_object.dart';
 import '../../../stores/project_store.dart';
 import '../../../stores/selection_store.dart';
 import '../../../stores/camera_store.dart'; // Importe o CameraStore

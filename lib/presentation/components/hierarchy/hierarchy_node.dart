@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import '../../../domain/scene/game_object.dart';
+import '../../../domain/scene/game_object/game_object.dart';
 import '../../../stores/selection_store.dart';
 import 'hierarchy_context_menu.dart';
 

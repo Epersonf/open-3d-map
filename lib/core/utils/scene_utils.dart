@@ -1,4 +1,4 @@
-import '../../domain/scene/game_object.dart';
+import '../../domain/scene/game_object/game_object.dart';
 
 class SceneUtils {
   /// Encontra um GameObject pelo ID na lista de objetos

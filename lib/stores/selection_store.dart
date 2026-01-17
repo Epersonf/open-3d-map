@@ -1,5 +1,5 @@
 import 'package:mobx/mobx.dart';
-import '../domain/scene/game_object.dart';
+import '../domain/scene/game_object/game_object.dart';
 
 class SelectionStore {
   SelectionStore._private();

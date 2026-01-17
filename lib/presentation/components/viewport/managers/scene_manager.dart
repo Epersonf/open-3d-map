@@ -1,5 +1,5 @@
 import 'package:three_js/three_js.dart' as three;
-import '../../../../domain/scene/game_object.dart';
+import '../../../../domain/scene/game_object/game_object.dart';
 import '../../../../domain/scene/scene_context.dart';
 import '../../../../stores/project_store.dart';
 import '../objects/scene_object.dart';
