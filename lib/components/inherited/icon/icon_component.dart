@@ -11,6 +11,10 @@ part 'icon_component.g.dart';
 @JsonSerializable()
 class IconComponent extends GameComponent {
   static const String typeId = 'icon';
+  // Nome fixo para identificar o objeto visual na cena, independente da instância do componente
+  static const String _spriteName = 'icon_component_visual';
+  // Chave para guardar o ID da geração atual no userData do objeto pai
+  static const String _genKey = 'icon_generation_id';
 
   @override
   String get id => typeId;
@@ -23,6 +27,7 @@ class IconComponent extends GameComponent {
   IconComponent({this.iconName = 'spawn'});
 
   factory IconComponent.fromJson(Map<String, dynamic> json) => _$IconComponentFromJson(json);
+  
   @override
   Map<String, dynamic> toJson() => _$IconComponentToJson(this);
 
@@ -34,12 +39,9 @@ class IconComponent extends GameComponent {
 
   @override
   void onStart(SceneContext owner) async {
-    if (_sprite != null) {
-      if (_sprite!.parent != owner.parent) {
-        owner.parent.add(_sprite!);
-      }
-      return;
-    }
+    final myGenId = DateTime.now().millisecondsSinceEpoch;
+    
+    owner.parent.userData[_genKey] = myGenId;
 
     IconData iconData = Icons.help_outline;
     switch (iconName) {
@@ -55,6 +57,14 @@ class IconComponent extends GameComponent {
       color: Colors.white,
     );
 
+    final currentGenId = owner.parent.userData[_genKey];
+    if (currentGenId != myGenId) {
+      texture.dispose();
+      return;
+    }
+
+    _removeExistingSprites(owner.parent);
+
     final material = three.SpriteMaterial();
     material.map = texture;
     material.color = three.Color.fromHex32(0xFFFFFF);
@@ -62,27 +72,43 @@ class IconComponent extends GameComponent {
     material.alphaTest = 0.5;
 
     _sprite = three.Sprite(material);
+    _sprite!.name = _spriteName;
     _sprite!.scale.setValues(0.5, 0.5, 0.5);
+    
     owner.parent.add(_sprite!);
   }
 
-  @override
-  void onDestroy(SceneContext owner) {
-    if (_sprite != null) {
-      _sprite!.removeFromParent();
-      _sprite = null;
+  void _removeExistingSprites(three.Object3D parent) {
+    for (int i = parent.children.length - 1; i >= 0; i--) {
+      final child = parent.children[i];
+      if (child.name == _spriteName) {
+        child.removeFromParent();
+      }
     }
   }
 
   @override
+  void onDestroy(SceneContext owner) {
+    owner.parent.userData[_genKey] = -1;
+    _removeExistingSprites(owner.parent);
+    _sprite = null;
+  }
+
+  @override
   bool onDidUpdate(GameComponent oldComponent, SceneContext owner) {
-    if (oldComponent is IconComponent && oldComponent.iconName == iconName) {
-      _sprite = oldComponent._sprite;
-      oldComponent._sprite = null;
-      if (_sprite != null && _sprite!.parent != owner.parent) {
-        owner.parent.add(_sprite!);
+    if (oldComponent is IconComponent) {
+      if (oldComponent.iconName == iconName) {
+        _sprite = oldComponent._sprite;
+        
+        if (_sprite == null) {
+           onStart(owner);
+        }
+        return true;
+      } 
+      else {
+        onStart(owner);
+        return true;
       }
-      return true;
     }
     return false;
   }
