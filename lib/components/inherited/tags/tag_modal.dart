@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../domain/tag/tag.dart';
+import 'tag/tag.dart';
 
 Future<Map<String, String>?> showTagModal(BuildContext context, {Tag? tag}) {
   final isEditing = tag != null;

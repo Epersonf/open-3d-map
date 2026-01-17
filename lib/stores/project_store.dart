@@ -3,7 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
-import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
+import 'package:open_3d_mapper/components/inherited/mesh/mesh_component.dart';
+import 'package:open_3d_mapper/components/inherited/icon/icon_component.dart';
 import 'package:open_3d_mapper/domain/asset/asset.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -109,14 +110,14 @@ class ProjectStore extends ChangeNotifier {
       _project!.assets.add(a);
     }
 
-    final visual = VisualComponent(type: VisualType.mesh, assetId: assetId, visibleInRuntime: true);
+    final mesh = MeshComponent(assetId: assetId, visibleInRuntime: true);
     final transformComp = TransformComponent.defaultValue();
 
     final go = GameObject(
       id: goId,
       name: base,
       parentId: null,
-      components: [transformComp, visual],
+      components: [transformComp, mesh],
     );
 
     if (_project!.scenes.isEmpty) {
@@ -250,7 +251,7 @@ class ProjectStore extends ChangeNotifier {
       id: const Uuid().v4(),
       name: 'Empty Object',
       parentId: parentId,
-      components: [TransformComponent.defaultValue(), VisualComponent(type: VisualType.none)],
+      components: [TransformComponent.defaultValue(), IconComponent(iconName: 'spawn')],
     );
 
     if (_project!.scenes.isEmpty) {

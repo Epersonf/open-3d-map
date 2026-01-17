@@ -1,30 +1,19 @@
-import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../../domain/scene/game_object.dart';
-import '../../../../domain/asset/asset.dart';
+import '../../../../domain/scene/scene_context.dart';
 import '../../../../stores/project_store.dart';
 import '../objects/scene_object.dart';
 import 'model_manager.dart';
-
-// Imports da nova arquitetura de renderização
-import '../rendering/renderer_factory.dart';
 
 class SceneManager {
   final three.Scene scene;
   final ModelManager modelManager;
   final Map<String, SceneObject> _sceneObjects = {};
 
-  late final RendererFactory _rendererFactory;
-
   SceneManager({
     required this.scene,
     required this.modelManager,
-  }) {
-    _rendererFactory = RendererFactory(
-      modelManager: modelManager,
-      projectPath: ProjectStore.instance.projectPath ?? '',
-    );
-  }
+  });
 
   SceneObject? getSceneObject(String id) => _sceneObjects[id];
   Map<String, SceneObject> get sceneObjects => Map.unmodifiable(_sceneObjects);
@@ -38,58 +27,74 @@ class SceneManager {
         scene.add(sceneObject.object3d!);
       }
     }
+
+    // initialize components when added
+    _initializeComponents(sceneObject);
   }
 
   Future<void> updateSceneObject(GameObject gameObject) async {
-    final sceneObject = _sceneObjects[gameObject.id];
-    if (sceneObject != null) {
-      final oldVisual = sceneObject.cachedVisual;
-      final newVisual = gameObject.getComponent<VisualComponent>();
-      if (newVisual == null) return;
+    SceneObject? sceneObject = _sceneObjects[gameObject.id];
+    if (sceneObject == null) {
+      // create container if missing
+      final group = three.Group();
+      group.name = gameObject.name;
+      group.userData['gameObjectId'] = gameObject.id;
 
-      bool visualChanged = oldVisual.type != newVisual.type ||
-          oldVisual.assetId != newVisual.assetId ||
-          oldVisual.iconName != newVisual.iconName;
-
-      if (visualChanged) {
-        sceneObject.disposeVisual();
-        final newObj3d = await _createVisualRepresentation(gameObject);
-        sceneObject.replaceObject3d(newObj3d, scene);
-        sceneObject.cachedVisual = newVisual;
+      sceneObject = SceneObject(id: gameObject.id, gameObject: gameObject, object3d: group);
+      _sceneObjects[gameObject.id] = sceneObject;
+      scene.add(group);
+      _initializeComponents(sceneObject);
+    } else {
+      // hot-reload components if the gameObject reference changed
+      if (sceneObject.gameObject != gameObject) {
+        _disposeComponents(sceneObject);
+        sceneObject.gameObject = gameObject;
+        sceneObject.object3d!.name = gameObject.name;
+        _initializeComponents(sceneObject);
       }
+    }
 
-      sceneObject.gameObject = gameObject;
-      sceneObject.updateTransform();
-      _updateParentRelationship(sceneObject, gameObject.parentId);
+    // update transform and parent
+    sceneObject.updateTransform();
+    _updateParentRelationship(sceneObject, gameObject.parentId);
+  }
+
+  void _initializeComponents(SceneObject sceneObject) {
+    if (sceneObject.object3d == null) return;
+
+    final context = SceneContext(
+      parent: sceneObject.object3d!,
+      scene: scene,
+      modelManager: modelManager,
+      projectStore: ProjectStore.instance,
+    );
+
+    for (final component in sceneObject.gameObject.components) {
+      try {
+        component.onStart(context);
+      } catch (e) {
+        // ignore component errors to keep editor stable
+      }
     }
   }
 
-  Future<three.Object3D?> _createVisualRepresentation(GameObject gameObject) async {
-    var visualComp = gameObject.getComponent<VisualComponent>();
-    if (visualComp == null) {
-      return null;
-    }
-    // Mesh handling: resolve Asset path via ProjectStore then use ModelManager
-    if (visualComp.type == VisualType.mesh && visualComp.assetId != null) {
-      final project = ProjectStore.instance.project;
-      final asset = project?.assets.firstWhere(
-        (a) => a.id == visualComp.assetId,
-        orElse: () => Asset(id: '', path: '', type: ''),
-      );
+  void _disposeComponents(SceneObject sceneObject) {
+    if (sceneObject.object3d == null) return;
 
-      if (asset != null && asset.path.isNotEmpty) {
-        final model = await modelManager.loadModel(
-          asset.id,
-          ProjectStore.instance.projectPath ?? '',
-          asset.path,
-        );
-        if (model != null) return model.clone();
+    final context = SceneContext(
+      parent: sceneObject.object3d!,
+      scene: scene,
+      modelManager: modelManager,
+      projectStore: ProjectStore.instance,
+    );
+
+    for (final component in sceneObject.gameObject.components) {
+      try {
+        component.onDestroy(context);
+      } catch (e) {
+        // ignore
       }
     }
-
-    // Delegate to renderer factory for icons/empty/fallback
-    final renderer = _rendererFactory.getRenderer(visualComp.type);
-    return await renderer.render(gameObject);
   }
 
   void _updateParentRelationship(SceneObject sceneObject, String? parentId) {
@@ -114,12 +119,16 @@ class SceneManager {
 
   void removeSceneObject(String id) {
     final sceneObject = _sceneObjects.remove(id);
-    sceneObject?.disposeVisual();
+    if (sceneObject != null) {
+      _disposeComponents(sceneObject);
+      sceneObject.object3d?.removeFromParent();
+    }
   }
 
   void clear() {
     for (final sceneObject in _sceneObjects.values) {
-      sceneObject.disposeVisual();
+      _disposeComponents(sceneObject);
+      sceneObject.object3d?.removeFromParent();
     }
     _sceneObjects.clear();
   }

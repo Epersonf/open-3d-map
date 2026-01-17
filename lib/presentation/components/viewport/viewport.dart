@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For LogicalKeyboardKey and KeyEvent
 import 'package:mobx/mobx.dart' hide Listener;
 import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
-import 'package:open_3d_mapper/components/inherited/visual/visual_component.dart';
 import 'package:open_3d_mapper/presentation/components/viewport/free_camera_controller.dart';
 import 'package:three_js/three_js.dart' as three;
 import '../../../stores/project_store.dart';
@@ -308,7 +307,11 @@ class _Viewport3DState extends State<Viewport3D> {
     final scene = project.scenes.first;
     
     for (final rootObject in scene.rootObjects) {
-      await _processGameObject(rootObject, null);
+      await sceneManager.updateSceneObject(rootObject);
+      // Recurse children after the parent is ensured
+      for (final child in rootObject.children) {
+        await _processGameObject(child, rootObject.id);
+      }
     }
 
     // Remover objetos que não existem mais no projeto
@@ -322,69 +325,13 @@ class _Viewport3DState extends State<Viewport3D> {
   }
 
   Future<void> _processGameObject(GameObject gameObject, String? parentId) async {
-    // Verificar se o objeto já existe
-    var sceneObject = sceneManager.getSceneObject(gameObject.id);
-    
-    if (sceneObject == null) {
-      // Criar novo objeto
-      sceneObject = await _createSceneObject(gameObject);
-      if (sceneObject != null) {
-        final parent = parentId != null ? sceneManager.getSceneObject(parentId)?.object3d : null;
-        sceneManager.addSceneObject(sceneObject, parent: parent);
-      }
-    } else {
-      // Atualizar objeto existente
-      sceneObject.gameObject = gameObject;
-      sceneManager.updateSceneObject(gameObject);
-    }
-
-    // Processar filhos recursivamente
+    await sceneManager.updateSceneObject(gameObject);
     for (final child in gameObject.children) {
       await _processGameObject(child, gameObject.id);
     }
   }
 
-  Future<SceneObject?> _createSceneObject(GameObject gameObject) async {
-    three.Object3D? object3d;
-
-    final project = ProjectStore.instance.project!;
-    final asset = project.assets.firstWhere(
-      (a) => a.id == gameObject.getComponent<VisualComponent>()?.assetId,
-      orElse: () => Asset(id: '', path: '', type: ''),
-    );
-    
-    if (asset.path.isNotEmpty && ProjectStore.instance.projectPath != null) {
-      final model = await modelManager.loadModel(
-        asset.id,
-        ProjectStore.instance.projectPath!,
-        asset.path,
-      );
-      
-      if (model != null) {
-        object3d = model.clone();
-
-        // Ensure this clone has its own userData map so it doesn't share
-        // the same reference with the original model or other clones.
-        object3d.userData = <String, dynamic>{};
-      }
-    }
-  
-    object3d ??= three.Object3D();
-    
-    // Configurar propriedades do objeto 3D
-    object3d.name = gameObject.name;
-    object3d.userData['gameObjectId'] = gameObject.id;
-    object3d.userData['assetId'] = gameObject.getComponent<VisualComponent>()?.assetId;
-
-    final sceneObject = SceneObject(
-      id: gameObject.id,
-      gameObject: gameObject,
-      object3d: object3d,
-    );
-    
-    sceneObject.updateTransform();
-    return sceneObject;
-  }
+  // SceneManager now creates the container and initializes components.
 
   Set<String> _getAllGameObjectIds(List<GameObject> objects) {
     final ids = <String>{};
