@@ -2,6 +2,7 @@ import 'package:open_3d_mapper/components/inherited/tags/tags_component.dart';
 import 'package:open_3d_mapper/components/inherited/transform/transform_component.dart';
 import 'package:open_3d_mapper/components/inherited/mesh/mesh_component.dart';
 import 'package:open_3d_mapper/components/inherited/icon/icon_component.dart';
+import 'package:open_3d_mapper/components/inherited/light/light_component.dart';
 import 'package:open_3d_mapper/components/component_registry.dart';
 
 class ComponentRegister {
@@ -32,6 +33,13 @@ class ComponentRegister {
       displayName: 'Icon Visualization',
       fromJson: (json) => IconComponent.fromJson(json),
       createDefault: () => IconComponent(iconName: 'help'),
+    );
+
+    ComponentRegistry.register(
+      LightComponent.typeId,
+      displayName: 'Light Source',
+      fromJson: (json) => LightComponent.fromJson(json),
+      createDefault: () => LightComponent(),
     );
   }
 }
