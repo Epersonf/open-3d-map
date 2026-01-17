@@ -30,6 +30,9 @@ class _Viewport3DState extends State<Viewport3D> {
   bool _ready = false;
   late FocusNode _focusNode;
 
+  // Flag local que indica se algum handler prioritário consumiu o input
+  bool _inputConsumed = false;
+
   VoidCallback? _projectListener;
   // Listener para requisições de foco da câmera
   ReactionDisposer? _selectionDisposer;
@@ -119,14 +122,19 @@ class _Viewport3DState extends State<Viewport3D> {
           });
 
           return GestureDetector(
+            // Permite capturar cliques no "vazio" (sem mesh atrás)
+            behavior: HitTestBehavior.translucent,
             onTapDown: (details) {
-              // Segurança: não tente selecionar antes da cena estar pronta
               if (!_ready) return;
+
+              // Arquitetura: respeitamos o flag do InputManager
+              if (_inputConsumed) return;
 
               selectionController?.onTapDown(
                   details, _viewportKey.currentContext!);
             },
             child: Listener(
+              behavior: HitTestBehavior.translucent,
               onPointerDown: (e) {
                 // Não processa interações de câmera antes da cena estar pronta
                 if (!_ready) return;
@@ -138,11 +146,12 @@ class _Viewport3DState extends State<Viewport3D> {
 
                 final renderBox = _viewportKey.currentContext
                     ?.findRenderObject() as RenderBox?;
-                final handled = renderBox != null
+
+                _inputConsumed = renderBox != null
                     ? InputManager.instance.handlePointerDown(e, renderBox.size)
                     : false;
 
-                if (handled) return;
+                if (_inputConsumed) return;
 
                 // Ninguém consumiu, delega para câmera
                 freeCam.onPointerDown(e);
@@ -152,14 +161,15 @@ class _Viewport3DState extends State<Viewport3D> {
 
                 InputManager.instance.handlePointerUp();
                 freeCam.onPointerUp(e);
+
+                // Reset da flag para o próximo clique
+                _inputConsumed = false;
               },
               onPointerMove: (event) {
                 if (!_ready) return;
 
-                // Distribui para o InputManager (gizmos, etc)
+                // Passamos o move para todos. O Gizmo internamente sabe se está dragging ou não.
                 InputManager.instance.handlePointerMove(event);
-
-                // Continua com câmera/hover
                 freeCam.onPointerMove(event);
                 selectionController?.onPointerMove(
                     event, _viewportKey.currentContext!);

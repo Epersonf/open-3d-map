@@ -213,6 +213,13 @@ class TransformComponent extends GameComponent {
     GizmoController.instance.update(owner.parent);
   }
 
+  @override
+  void onDeselected(SceneContext owner) {
+    // O TransfomComponent é responsável por ocultar o Gizmo quando
+    // o objeto é desselecionado para manter o desacoplamento da Viewport.
+    GizmoController.instance.update(null);
+  }
+
   void _performFocus(SceneContext owner) {
     final camera = owner.camera;
     final targetPos = three.Vector3();
