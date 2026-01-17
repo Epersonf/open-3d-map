@@ -38,4 +38,10 @@ class TagsComponent implements GameComponent {
   Widget inspectorWidget() {
     return TagsInspector();
   }
+  
+  @override
+  void onDeselected(owner) {}
+  
+  @override
+  void onSelected(owner) {}
 }

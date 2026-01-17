@@ -19,6 +19,12 @@ abstract class GameComponent {
   /// Chamado quando o componente/owner é destruído
   void onDestroy(dynamic owner) {}
 
+  /// Chamado quando o GameObject dono deste componente é selecionado
+  void onSelected(dynamic owner) {}
+
+  /// Chamado quando o GameObject dono deste componente é desmarcado
+  void onDeselected(dynamic owner) {}
+
   Widget inspectorWidget() {
     return Text('No inspector for $id');
   }

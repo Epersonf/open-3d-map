@@ -34,7 +34,7 @@ class GameObject {
   // --- Component helpers ---
   T? getComponent<T extends GameComponent>() {
     for (final c in components) {
-      if (c is T) return c as T;
+      if (c is T) return c;
     }
     return null;
   }

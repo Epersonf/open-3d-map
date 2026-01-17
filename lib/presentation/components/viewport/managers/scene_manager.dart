@@ -132,53 +132,48 @@ class SceneManager {
     }
     _sceneObjects.clear();
   }
+  // --- Selection delegation ---
+  // Track current selection so we can notify old/new components
+  String? _currentSelectionId;
 
-  void highlightObject(String? gameObjectId) {
-    for (final sceneObject in _sceneObjects.values) {
-      _removeHighlight(sceneObject);
+  /// Called by the Viewport when selection changes
+  void onSelectionChanged(String? newId) {
+    // Unselect previous
+    if (_currentSelectionId != null && _currentSelectionId != newId) {
+      final oldObj = _sceneObjects[_currentSelectionId];
+      if (oldObj != null) {
+        _notifySelectionChange(oldObj, false);
+      }
     }
 
-    if (gameObjectId != null) {
-      final sceneObject = _sceneObjects[gameObjectId];
-      if (sceneObject != null) {
-        _applyHighlight(sceneObject);
+    _currentSelectionId = newId;
+
+    // Select new
+    if (newId != null) {
+      final newObj = _sceneObjects[newId];
+      if (newObj != null) {
+        _notifySelectionChange(newObj, true);
       }
     }
   }
 
-  void _removeHighlight(SceneObject sceneObject) {
-    final object3d = sceneObject.object3d;
-    if (object3d == null) return;
+  void _notifySelectionChange(SceneObject sceneObject, bool isSelected) {
+    if (sceneObject.object3d == null) return;
+    final context = SceneContext(
+      parent: sceneObject.object3d!,
+      scene: scene,
+      modelManager: modelManager,
+      projectStore: ProjectStore.instance,
+    );
 
-    object3d.traverse((object) {
-      if (object is three.Mesh) {
-        if (object.material is three.MeshStandardMaterial) {
-          final material = object.material as three.MeshStandardMaterial;
-          material.emissive = three.Color.fromHex32(0x000000);
-          material.emissiveIntensity = 0.0;
+    for (final component in sceneObject.gameObject.components) {
+      try {
+        if (isSelected) {
+          component.onSelected(context);
+        } else {
+          component.onDeselected(context);
         }
-      }
-      if (object is three.Sprite) {
-        object.material?.color = three.Color.fromHex32(0xFFFFFF);
-      }
-    });
-  }
-
-  void _applyHighlight(SceneObject sceneObject) {
-    final object3d = sceneObject.object3d;
-    if (object3d == null) return;
-
-    object3d.traverse((object) {
-      if (object is three.Mesh) {
-        if (object.material is three.MeshStandardMaterial) {
-          final material = object.material as three.MeshStandardMaterial;
-          material.emissive = three.Color.fromHex32(0x444400);
-          material.emissiveIntensity = 0.5;
-        }
-      }
-      if (object is three.Sprite) {
-        object.material?.color = three.Color.fromHex32(0xFFAA00);
-      }
-    });
+      } catch (_) {}
+    }
   }
 }

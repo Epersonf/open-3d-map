@@ -69,7 +69,22 @@ class IconComponent implements GameComponent {
       _sprite = null;
     }
   }
-  
+  // --- Lógica de Seleção Encapsulada ---
+
+  @override
+  void onSelected(dynamic owner) {
+    if (_sprite is three.Sprite) {
+      (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFAA00);
+    }
+  }
+
+  @override
+  void onDeselected(dynamic owner) {
+    if (_sprite is three.Sprite) {
+      (_sprite as three.Sprite).material?.color = three.Color.fromHex32(0xFFFFFF);
+    }
+  }
+
   @override
   void onUpdate(owner, double dt) {}
 }

@@ -69,7 +69,35 @@ class MeshComponent implements GameComponent {
       _meshObject = null;
     }
   }
-  
+  // --- Lógica de Seleção Encapsulada ---
+
+  @override
+  void onSelected(dynamic owner) {
+    if (_meshObject == null) return;
+    _setHighlight(true);
+  }
+
+  @override
+  void onDeselected(dynamic owner) {
+    if (_meshObject == null) return;
+    _setHighlight(false);
+  }
+
+  void _setHighlight(bool active) {
+    _meshObject!.traverse((object) {
+      if (object is three.Mesh && object.material is three.MeshStandardMaterial) {
+        final material = object.material as three.MeshStandardMaterial;
+        if (active) {
+          material.emissive = three.Color.fromHex32(0x444400);
+          material.emissiveIntensity = 0.5;
+        } else {
+          material.emissive = three.Color.fromHex32(0x000000);
+          material.emissiveIntensity = 0.0;
+        }
+      }
+    });
+  }
+
   @override
   void onUpdate(owner, double dt) {}
 }

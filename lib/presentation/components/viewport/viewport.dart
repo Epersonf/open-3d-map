@@ -354,7 +354,7 @@ class _Viewport3DState extends State<Viewport3D> {
     _selectionDisposer = reaction(
       (_) => SelectionStore.instance.selected,
       (GameObject? selected) {
-        sceneManager.highlightObject(selected?.id);
+        sceneManager.onSelectionChanged(selected?.id);
       },
       fireImmediately: true,
     );
