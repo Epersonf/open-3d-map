@@ -16,9 +16,11 @@ import '../stores/selection_store.dart';
 class ProjectStore extends ChangeNotifier {
   ProjectStore._privateConstructor();
   static final ProjectStore instance = ProjectStore._privateConstructor();
+
   String? _projectPath;
   String? _assetsRoot;
   String? _currentPath;
+
   // Nome do arquivo do projeto (ex: 'project.o3m' ou personalizado)
   String _projectFileName = 'project.o3m';
   List<FileSystemEntity> _entries = [];
@@ -27,8 +29,13 @@ class ProjectStore extends ChangeNotifier {
   String? get assetsRoot => _assetsRoot;
   String? get currentPath => _currentPath;
   List<FileSystemEntity> get entries => List.unmodifiable(_entries);
+
   Project? _project;
   Project? get project => _project;
+
+  // --- MULTI-SCENE MANAGEMENT ---
+  Scene? _currentScene;
+  Scene? get currentScene => _currentScene;
 
   void setProjectPath(String path) {
     _projectPath = path;
@@ -38,14 +45,61 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Modificado para receber opcionalmente o nome do arquivo do projeto
-  void setProject(Project project, String path,
-      {String fileName = 'project.o3m'}) {
+  /// Carrega o projeto e tenta carregar as cenas individuais da pasta 'scenes/'
+  Future<void> setProject(Project project, String path,
+      {String fileName = 'project.o3m'}) async {
     _project = project;
     _projectFileName = fileName;
-
     setProjectPath(path);
+
+    // 1. Tentar carregar cenas da pasta 'scenes' para garantir dados mais recentes
+    await _loadScenesFromDisk();
+
+    // 2. Define a cena atual (a primeira ou cria uma se não houver)
+    if (_project!.scenes.isNotEmpty) {
+      _currentScene = _project!.scenes.first;
+    } else {
+      createScene(name: 'Main Scene');
+    }
+
     notifyListeners();
+  }
+
+  Future<void> _loadScenesFromDisk() async {
+    if (_project == null || _projectPath == null) return;
+
+    final scenesDir = Directory(p.join(_projectPath!, 'scenes'));
+    if (!await scenesDir.exists()) return;
+
+    final List<Scene> loadedScenes = [];
+
+    try {
+      final files = scenesDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => p.extension(f.path) == '.json');
+
+      for (final file in files) {
+        try {
+          final content = await file.readAsString();
+          final json = jsonDecode(content);
+          final scene = Scene.fromJson(json);
+          loadedScenes.add(scene);
+        } catch (e) {
+          print('Error loading scene from ${file.path}: $e');
+        }
+      }
+    } catch (e) {
+      print('Error listing scenes dir: $e');
+    }
+
+    // Se carregamos cenas do disco, substituímos as que estão na memória do projeto
+    // Isso permite que o arquivo project.o3m seja apenas um manifesto ou backup
+    if (loadedScenes.isNotEmpty) {
+      // Opcional: Manter a ordem ou mesclar. Aqui vamos substituir.
+      _project!.scenes.clear();
+      _project!.scenes.addAll(loadedScenes);
+    }
   }
 
   Future<void> refreshCurrent() async {
@@ -112,8 +166,136 @@ class ProjectStore extends ChangeNotifier {
     return map;
   }
 
+  // --- SCENE OPERATIONS ---
+
+  void selectScene(String sceneId) {
+    if (_project == null) return;
+    final scene = _project!.scenes.firstWhere((s) => s.id == sceneId,
+        orElse: () => _project!.scenes.first);
+    if (_currentScene != scene) {
+      // Limpa seleção ao trocar de cena para evitar erros de referência
+      SelectionStore.instance.clear();
+      _currentScene = scene;
+      notifyListeners();
+    }
+  }
+
+  void createScene({String name = 'New Scene'}) {
+    if (_project == null) return;
+    final newScene = Scene(
+        id: const Uuid().v4(),
+        name: _generateUniqueSceneName(name),
+        rootObjects: []);
+    _project!.scenes.add(newScene);
+    _currentScene = newScene;
+    SelectionStore.instance.clear();
+    notifyListeners();
+  }
+
+  void duplicateScene(String sceneId) {
+    if (_project == null) return;
+    try {
+      final original = _project!.scenes.firstWhere((s) => s.id == sceneId);
+
+      // Deep clone objects
+      final clonedObjects = original.rootObjects
+          .map((obj) => _deepCloneGameObject(obj, null,
+                  isRootClone:
+                      false) // false pois queremos manter nomes originais, só IDs novos
+              )
+          .toList();
+
+      final clone = Scene(
+          id: const Uuid().v4(),
+          name: _generateUniqueSceneName("${original.name} Copy"),
+          rootObjects: clonedObjects);
+
+      _project!.scenes.add(clone);
+      _currentScene = clone;
+      SelectionStore.instance.clear();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void deleteScene(String sceneId) {
+    if (_project == null || _project!.scenes.length <= 1)
+      return; // Prevent deleting last scene
+
+    _project!.scenes.removeWhere((s) => s.id == sceneId);
+
+    // Se deletou a cena atual, muda para a primeira disponível
+    if (_currentScene?.id == sceneId) {
+      _currentScene = _project!.scenes.first;
+      SelectionStore.instance.clear();
+    }
+    notifyListeners();
+  }
+
+  void renameScene(String sceneId, String newName) {
+    if (_project == null) return;
+    final scene = _project!.scenes.firstWhere((s) => s.id == sceneId);
+    scene.name = newName;
+    notifyListeners();
+  }
+
+  String _generateUniqueSceneName(String baseName) {
+    int count = 1;
+    String name = baseName;
+    while (_project!.scenes.any((s) => s.name == name)) {
+      name = "$baseName $count";
+      count++;
+    }
+    return name;
+  }
+
+  String _sanitizeFilename(String name) {
+    return name
+        .replaceAll(RegExp(r'[^\w\s\-]'), '') // Remove chars especiais
+        .replaceAll(RegExp(r'\s+'), '_') // Espaços para _
+        .toLowerCase();
+  }
+
+  // --- SAVE LOGIC ---
+
+  Future<void> saveProject() async {
+    if (_project == null || _projectPath == null) return;
+
+    // 1. Salvar o arquivo principal do projeto (.o3m)
+    final projectFile = File(p.join(_projectPath!, _projectFileName));
+    final projectEncoded =
+        const JsonEncoder.withIndent('  ').convert(_project!.toJson());
+    await projectFile.writeAsString(projectEncoded);
+
+    // 2. Salvar cada cena em um arquivo separado na pasta 'scenes'
+    final scenesDir = Directory(p.join(_projectPath!, 'scenes'));
+    if (!await scenesDir.exists()) {
+      await scenesDir.create(recursive: true);
+    }
+
+    for (final scene in _project!.scenes) {
+      final safeName = _sanitizeFilename(scene.name);
+      // Fallback para ID se nome ficar vazio
+      final filename = safeName.isEmpty ? scene.id : safeName;
+      final sceneFile = File(p.join(scenesDir.path, '$filename.json'));
+
+      final sceneEncoded =
+          const JsonEncoder.withIndent('  ').convert(scene.toJson());
+      await sceneFile.writeAsString(sceneEncoded);
+    }
+  }
+
+  // --- OBJECT OPERATIONS (Updated to use _currentScene) ---
+
   Future<void> addAssetAsGameObject(String absolutePath) async {
     if (_project == null || _projectPath == null) return;
+
+    // Ensure we have a scene
+    if (_currentScene == null) {
+      if (_project!.scenes.isEmpty)
+        createScene();
+      else
+        _currentScene = _project!.scenes.first;
+    }
 
     final rel = p.relative(absolutePath, from: _projectPath!);
     final base = p.basenameWithoutExtension(absolutePath);
@@ -142,13 +324,8 @@ class ProjectStore extends ChangeNotifier {
       components: [transformComp, mesh],
     );
 
-    if (_project!.scenes.isEmpty) {
-      final scene =
-          Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [go]);
-      _project!.scenes.add(scene);
-    } else {
-      _project!.scenes.first.rootObjects.add(go);
-    }
+    // Adiciona na cena atual
+    _currentScene!.rootObjects.add(go);
 
     final exists = _project!.assets.any((a) => a.path == rel);
     if (!exists) {
@@ -160,15 +337,6 @@ class ProjectStore extends ChangeNotifier {
     }
 
     notifyListeners();
-  }
-
-  // Modificado para salvar usando o nome do arquivo do projeto e extensão .o3m
-  Future<void> saveProject() async {
-    if (_project == null || _projectPath == null) return;
-    final file = File(p.join(_projectPath!, _projectFileName));
-    final encoded =
-        const JsonEncoder.withIndent('  ').convert(_project!.toJson());
-    await file.writeAsString(encoded);
   }
 
   bool updateGameObject(GameObject updated) {
@@ -188,6 +356,8 @@ class ProjectStore extends ChangeNotifier {
       return false;
     }
 
+    // Procura em todas as cenas para garantir consistência,
+    // embora a UI só mostre a atual
     for (final scene in _project!.scenes) {
       if (_replaceInList(scene.rootObjects)) {
         replaced = true;
@@ -251,20 +421,21 @@ class ProjectStore extends ChangeNotifier {
   }
 
   void duplicateGameObject(GameObject original) {
-    if (_project == null || _project!.scenes.isEmpty) return;
+    if (_project == null || _currentScene == null) return;
 
     final clone =
         _deepCloneGameObject(original, original.parentId, isRootClone: true);
-    final scene = _project!.scenes.first;
 
+    // Adiciona na cena onde o original está, ou na cena atual
     if (original.parentId == null) {
-      scene.rootObjects.add(clone);
+      // Se era root, clonamos na root da cena atual (simplificação)
+      _currentScene!.rootObjects.add(clone);
     } else {
       final parent = findGameObjectById(original.parentId!);
       if (parent != null) {
         parent.children.add(clone);
       } else {
-        scene.rootObjects.add(clone);
+        _currentScene!.rootObjects.add(clone);
       }
     }
 
@@ -274,6 +445,14 @@ class ProjectStore extends ChangeNotifier {
 
   void createEmpty({String? parentId}) {
     if (_project == null) return;
+
+    // Garante cena
+    if (_currentScene == null) {
+      if (_project!.scenes.isEmpty)
+        createScene();
+      else
+        _currentScene = _project!.scenes.first;
+    }
 
     final newObj = GameObject(
       id: const Uuid().v4(),
@@ -285,27 +464,22 @@ class ProjectStore extends ChangeNotifier {
       ],
     );
 
-    if (_project!.scenes.isEmpty) {
-      final scene =
-          Scene(id: 'scene-main', name: 'Main Scene', rootObjects: [newObj]);
-      _project!.scenes.add(scene);
+    if (parentId == null) {
+      _currentScene!.rootObjects.add(newObj);
     } else {
-      if (parentId == null) {
-        _project!.scenes.first.rootObjects.add(newObj);
+      final parent = findGameObjectById(parentId);
+      if (parent != null) {
+        parent.children.add(newObj);
       } else {
-        final parent = findGameObjectById(parentId);
-        if (parent != null) {
-          parent.children.add(newObj);
-        } else {
-          _project!.scenes.first.rootObjects.add(newObj);
-        }
+        _currentScene!.rootObjects.add(newObj);
       }
     }
+
     notifyListeners();
   }
 
   void reparentObject(String childId, String? newParentId) {
-    if (_project == null) return;
+    if (_project == null || _currentScene == null) return;
     if (childId == newParentId) return;
 
     // 1. Validar descendência
@@ -353,13 +527,15 @@ class ProjectStore extends ChangeNotifier {
     if (!removed) return;
 
     if (newParentId == null) {
-      _project!.scenes.first.rootObjects.add(movedObj);
+      // Move para a root da cena ATUAL
+      _currentScene!.rootObjects.add(movedObj);
     } else {
       final parentInTree = findGameObjectById(newParentId);
       if (parentInTree != null) {
         parentInTree.children.add(movedObj);
       } else {
-        _project!.scenes.first.rootObjects.add(movedObj);
+        // Fallback
+        _currentScene!.rootObjects.add(movedObj);
       }
     }
 

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For LogicalKeyboardKey and KeyEvent
+import 'package:flutter/services.dart'; 
 import 'package:mobx/mobx.dart' hide Listener;
 import 'package:open_3d_mapper/presentation/components/viewport/free_camera_controller.dart';
 import 'package:three_js/three_js.dart' as three;
@@ -27,50 +27,35 @@ class _Viewport3DState extends State<Viewport3D> {
   late SceneManager sceneManager;
   late ModelManager modelManager;
   SelectionController? selectionController;
-  // Indica que a cena ThreeJS foi inicializada e `threeJs.camera` está disponível
+  
   bool _ready = false;
   late FocusNode _focusNode;
-
-  // Flag local que indica se algum handler prioritário consumiu o input
   bool _inputConsumed = false;
 
   VoidCallback? _projectListener;
   VoidCallback? _cameraStoreListener;
-  // Listener para requisições de foco da câmera
   ReactionDisposer? _selectionDisposer;
   final GlobalKey _viewportKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-
-    // 2. INICIALIZE AQUI
     _focusNode = FocusNode();
-    // Nota: não chamamos requestFocus aqui — usaremos `autofocus` no Focus widget
 
     threeJs = three.ThreeJS(
       setup: setupScene,
       onSetupComplete: _onThreeJsReady,
     );
 
-    // Criar o controller aqui é seguro pois o construtor não acessa a câmera.
     freeCam = FreeCameraController(threeJs);
-
-    // Inicializar gerenciadores que não dependem da cena
     modelManager = ModelManager();
 
-    // Registrar listener do CameraStore para reagir a solicitações de foco
     _cameraStoreListener = _onCameraFocusRequest;
     CameraStore.instance.addListener(_cameraStoreListener!);
-
-    // Scene-dependent managers will be created once ThreeJS setup completes
-    // via [_onThreeJsReady]. This avoids accessing `threeJs.scene` before
-    // it has been initialized by the ThreeJS runtime.
   }
 
   @override
   void dispose() {
-    // 3. DESCARTE AQUI
     _focusNode.dispose();
     if (_projectListener != null) {
       ProjectStore.instance.removeListener(_projectListener!);
@@ -84,7 +69,6 @@ class _Viewport3DState extends State<Viewport3D> {
       _selectionDisposer!();
       _selectionDisposer = null;
     }
-    // Remove tool listener if it was added
     ToolStore.instance.removeListener(_onToolChanged);
     freeCam.dispose();
     threeJs.dispose();
@@ -96,33 +80,24 @@ class _Viewport3DState extends State<Viewport3D> {
 
   @override
   Widget build(BuildContext context) {
-    // Usa `Focus` em vez de `KeyboardListener` para usar o HardwareKeyboard
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: (node, event) {
-        // Alimenta o InputManager com o estado atual do teclado (polling)
         try {
           InputManager.instance.handleKeyEvent(event);
         } catch (_) {}
-
         _onKey(event);
         return KeyEventResult.ignored;
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Atualizar o tamanho do renderizador e aspect ratio da câmera
-          // quando as dimensões do widget mudarem
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            // Não tocar na câmera/renderer antes da cena estar pronta
             if (!_ready) return;
-
             if (threeJs.width != constraints.maxWidth ||
                 threeJs.height != constraints.maxHeight) {
               threeJs.renderer
                   ?.setSize(constraints.maxWidth, constraints.maxHeight);
-
-              // Atualizar aspect ratio da câmera
               if (threeJs.camera is three.PerspectiveCamera) {
                 final camera = threeJs.camera as three.PerspectiveCamera;
                 camera.aspect = constraints.maxWidth / constraints.maxHeight;
@@ -132,24 +107,17 @@ class _Viewport3DState extends State<Viewport3D> {
           });
 
           return GestureDetector(
-            // Permite capturar cliques no "vazio" (sem mesh atrás)
             behavior: HitTestBehavior.translucent,
             onTapDown: (details) {
               if (!_ready) return;
-
-              // Arquitetura: respeitamos o flag do InputManager
               if (_inputConsumed) return;
-
               selectionController?.onTapDown(
                   details, _viewportKey.currentContext!);
             },
             child: Listener(
               behavior: HitTestBehavior.translucent,
               onPointerDown: (e) {
-                // Não processa interações de câmera antes da cena estar pronta
                 if (!_ready) return;
-
-                // Garante foco ao clicar na área 3D
                 if (!_focusNode.hasFocus) {
                   _focusNode.requestFocus();
                 }
@@ -162,23 +130,16 @@ class _Viewport3DState extends State<Viewport3D> {
                     : false;
 
                 if (_inputConsumed) return;
-
-                // Ninguém consumiu, delega para câmera
                 freeCam.onPointerDown(e);
               },
               onPointerUp: (e) {
                 if (!_ready) return;
-
                 InputManager.instance.handlePointerUp();
                 freeCam.onPointerUp(e);
-
-                // Reset da flag para o próximo clique
                 _inputConsumed = false;
               },
               onPointerMove: (event) {
                 if (!_ready) return;
-
-                // Passamos o move para todos. O Gizmo internamente sabe se está dragging ou não.
                 InputManager.instance.handlePointerMove(event);
                 freeCam.onPointerMove(event);
                 selectionController?.onPointerMove(
@@ -206,7 +167,6 @@ class _Viewport3DState extends State<Viewport3D> {
       2000,
     );
 
-    // Use standard XYZ rotation order to match ThreeJS defaults
     threeJs.camera.rotation.order = three.RotationOrders.xyz;
     threeJs.camera.position.setValues(0, 2, 8);
 
@@ -215,17 +175,12 @@ class _Viewport3DState extends State<Viewport3D> {
     final dir = three.DirectionalLight(0xffffff, 1);
     dir.position.setValues(5, 10, 5);
     threeJs.scene.add(dir);
-    // Scene is ready; final synchronization will be triggered from
-    // [_onThreeJsReady] once the ThreeJS setup completes.
   }
 
   void _onThreeJsReady() {
-    // Now that threeJs.scene is initialized, create scene-dependent managers
-    // Marca a cena pronta para que o build() possa manipular câmera/renderer
     setState(() {
       _ready = true;
     });
-    // Inicializa o controller que depende da câmera do ThreeJS
     try {
       freeCam.initialize();
     } catch (_) {}
@@ -240,39 +195,24 @@ class _Viewport3DState extends State<Viewport3D> {
       sceneManager: sceneManager,
     );
 
-    // Note: GizmoController is initialized by TransformComponent when components start.
-
-    // Ouvir mudanças no projeto
     _projectListener = updateSceneFromProject;
     ProjectStore.instance.addListener(_projectListener!);
 
-    // Ouvir mudanças na seleção
     _setupSelectionListener();
 
-    // Populate scene from project now that sceneManager exists
     updateSceneFromProject();
 
-    // Start the main game loop updates for scene components
     threeJs.addAnimationEvent((dt) {
       sceneManager.onUpdate(dt);
     });
   }
 
-  void _onToolChanged() {
-    // kept for compatibility; InputManager/Gizmo will react via ToolStore listener internally
-  }
+  void _onToolChanged() {}
 
-  /// Método centralizado para gerenciar input de teclado
   void _onKey(KeyEvent event) {
-    // 2. Atalhos de Editor (Apenas no KeyDown para não disparar várias vezes)
     if (event is KeyDownEvent) {
-      // Se estivermos "voando" com a câmera (Botão direito segurado),
-      // não queremos trocar a ferramenta, pois W e E são usados para movimento.
       if (freeCam.rightMouseDown) return;
-
       final key = event.logicalKey;
-
-      // --- Alternar Modos (W, E, R) ---
       if (key == LogicalKeyboardKey.keyW) {
         ToolStore.instance.setMode(GizmoMode.translate);
       } else if (key == LogicalKeyboardKey.keyE) {
@@ -283,32 +223,45 @@ class _Viewport3DState extends State<Viewport3D> {
     }
   }
 
+  // --- CORREÇÃO AQUI ---
   Future<void> updateSceneFromProject() async {
     final project = ProjectStore.instance.project;
-    if (project == null || project.scenes.isEmpty) {
+    // 1. Obtemos a Cena Selecionada Atual
+    final currentScene = ProjectStore.instance.currentScene;
+
+    // Se não houver projeto ou cena selecionada, limpamos tudo
+    if (project == null || currentScene == null) {
       sceneManager.clear();
       return;
     }
 
-    final scene = project.scenes.first;
+    // A variável 'scene' agora aponta para a cena selecionada, e não a primeira
+    final scene = currentScene;
 
+    // 2. Atualizamos/Criamos objetos que existem na cena atual
     for (final rootObject in scene.rootObjects) {
       await sceneManager.updateSceneObject(rootObject);
-      // Recurse children after the parent is ensured
       for (final child in rootObject.children) {
         await _processGameObject(child, rootObject.id);
       }
     }
 
-    // Remover objetos que não existem mais no projeto
+    // 3. Sistema de Diff (Diferença):
+    // Pegamos todos os IDs que DEVEM estar na cena atual
     final projectObjectIds = _getAllGameObjectIds(scene.rootObjects);
+    
+    // Pegamos todos os IDs que ESTÃO atualmente renderizados no ThreeJS
     final currentObjectIds = sceneManager.sceneObjects.keys.toSet();
+    
+    // A diferença são os objetos que estavam na cena anterior (ou deletados)
+    // e devem ser removidos agora.
     final objectsToRemove = currentObjectIds.difference(projectObjectIds);
 
     for (final id in objectsToRemove) {
       sceneManager.removeSceneObject(id);
     }
   }
+  // --- FIM DA CORREÇÃO ---
 
   Future<void> _processGameObject(
       GameObject gameObject, String? parentId) async {
@@ -317,8 +270,6 @@ class _Viewport3DState extends State<Viewport3D> {
       await _processGameObject(child, gameObject.id);
     }
   }
-
-  // SceneManager now creates the container and initializes components.
 
   Set<String> _getAllGameObjectIds(List<GameObject> objects) {
     final ids = <String>{};
@@ -347,32 +298,22 @@ class _Viewport3DState extends State<Viewport3D> {
     );
   }
 
-  /// Método chamado quando o CameraStore solicita foco em um objeto
   void _onCameraFocusRequest() {
-    // Se a cena não estiver pronta ou não houver alvo, ignora
     if (!_ready) return;
-
     final target = CameraStore.instance.focusTarget;
     if (target == null) return;
 
-    // Busca o objeto 3D correspondente na cena
     final sceneObject = sceneManager.getSceneObject(target.id);
     if (sceneObject != null && sceneObject.object3d != null) {
       _performFocus(sceneObject.object3d!);
     }
-
-    // Marca como consumido para não repetir
     CameraStore.instance.consumeRequest();
   }
 
-  /// Executa o foco da câmera no objeto 3D especificado
   void _performFocus(three.Object3D targetObj) {
-    // Lógica similar à do TransformComponent
     final targetPos = three.Vector3();
     targetObj.getWorldPosition(targetPos);
-
     const double distance = 5.0;
-    // Offset simples (Pode ser melhorado calculando BoundingBox futuramente)
     final offset = three.Vector3(0, 2, distance);
 
     threeJs.camera.position.setValues(
@@ -381,8 +322,6 @@ class _Viewport3DState extends State<Viewport3D> {
       targetPos.z + offset.z,
     );
     threeJs.camera.lookAt(targetPos);
-    
-    // Garante atualização da matriz da câmera
     threeJs.camera.updateMatrixWorld();
   }
 }
