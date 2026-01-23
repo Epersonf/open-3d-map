@@ -1,11 +1,14 @@
-name: Build O3M Desktop
+name: Build and Release O3M
 
 on:
   push:
     branches: [ "main" ]
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  build-and-release:
     name: Build for ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
 
@@ -13,20 +16,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Windows
           - os: windows-latest
             target: windows
-            artifact_name: windows-build
-            build_path: build/windows/x64/runner/Release/*
-
+            build_path: build/windows/x64/runner/Release
+            asset_name: O3M-Windows.zip
+            
+          # macOS
           - os: macos-latest
             target: macos
-            artifact_name: macos-build
-            build_path: build/macos/Build/Products/Release/*.app
+            build_path: build/macos/Build/Products/Release
+            asset_name: O3M-macOS.zip
 
+          # Linux
           - os: ubuntu-latest
             target: linux
-            artifact_name: linux-build
             build_path: build/linux/x64/release/bundle
+            asset_name: O3M-Linux.tar.gz
 
     steps:
       - name: Code Checkout
@@ -50,8 +56,26 @@ jobs:
       - name: Build Flutter Desktop App
         run: flutter build ${{ matrix.target }} --release
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Compress Build (Windows)
+        if: matrix.target == 'windows'
+        run: Compress-Archive -Path "${{ matrix.build_path }}\*" -DestinationPath ${{ matrix.asset_name }}
+
+      - name: Compress Build (macOS)
+        if: matrix.target == 'macos'
+        run: |
+          cd ${{ matrix.build_path }}
+          zip -r $GITHUB_WORKSPACE/${{ matrix.asset_name }} *.app
+
+      - name: Compress Build (Linux)
+        if: matrix.target == 'linux'
+        run: |
+          cd ${{ matrix.build_path }}
+          tar -czvf $GITHUB_WORKSPACE/${{ matrix.asset_name }} *
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.build_path }}
+          files: ${{ matrix.asset_name }}
+          draft: true
+          prerelease: false
