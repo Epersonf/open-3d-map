@@ -21,7 +21,6 @@ class ProjectStore extends ChangeNotifier {
   String? _assetsRoot;
   String? _currentPath;
 
-  // Nome do arquivo do projeto (ex: 'project.o3m' ou personalizado)
   String _projectFileName = 'project.o3m';
   List<FileSystemEntity> _entries = [];
 
@@ -33,7 +32,6 @@ class ProjectStore extends ChangeNotifier {
   Project? _project;
   Project? get project => _project;
 
-  // --- MULTI-SCENE MANAGEMENT ---
   Scene? _currentScene;
   Scene? get currentScene => _currentScene;
 
@@ -45,18 +43,23 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Carrega o projeto e tenta carregar as cenas individuais da pasta 'scenes/'
+  /// Define o projeto. Note que ignoramos as cenas que vierem dentro do JSON do projeto,
+  /// pois a fonte da verdade agora é a pasta 'scenes/'.
   Future<void> setProject(Project project, String path,
       {String fileName = 'project.o3m'}) async {
     _project = project;
     _projectFileName = fileName;
     setProjectPath(path);
 
-    // 1. Tentar carregar cenas da pasta 'scenes' para garantir dados mais recentes
+    // Limpa qualquer cena que possa ter vindo do JSON do manifesto (lixo ou cache antigo)
+    _project!.scenes.clear();
+
+    // Carrega as cenas diretamente do disco (Scan da pasta)
     await _loadScenesFromDisk();
 
-    // 2. Define a cena atual (a primeira ou cria uma se não houver)
+    // Define a cena atual
     if (_project!.scenes.isNotEmpty) {
+      // Opcional: Tentar manter a última cena aberta se salvarmos essa preferência
       _currentScene = _project!.scenes.first;
     } else {
       createScene(name: 'Main Scene');
@@ -65,11 +68,15 @@ class ProjectStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Escaneia a pasta /scenes e popula o objeto Project
   Future<void> _loadScenesFromDisk() async {
     if (_project == null || _projectPath == null) return;
 
     final scenesDir = Directory(p.join(_projectPath!, 'scenes'));
-    if (!await scenesDir.exists()) return;
+    if (!await scenesDir.exists()) {
+      await scenesDir.create(); // Garante que a pasta existe
+      return;
+    }
 
     final List<Scene> loadedScenes = [];
 
@@ -79,7 +86,11 @@ class ProjectStore extends ChangeNotifier {
           .whereType<File>()
           .where((f) => p.extension(f.path) == '.json');
 
-      for (final file in files) {
+      // Ordena por nome de arquivo para ter consistência na UI
+      final sortedFiles = files.toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
+
+      for (final file in sortedFiles) {
         try {
           final content = await file.readAsString();
           final json = jsonDecode(content);
@@ -93,14 +104,10 @@ class ProjectStore extends ChangeNotifier {
       print('Error listing scenes dir: $e');
     }
 
-    // Se carregamos cenas do disco, substituímos as que estão na memória do projeto
-    // Isso permite que o arquivo project.o3m seja apenas um manifesto ou backup
-    if (loadedScenes.isNotEmpty) {
-      // Opcional: Manter a ordem ou mesclar. Aqui vamos substituir.
-      _project!.scenes.clear();
-      _project!.scenes.addAll(loadedScenes);
-    }
+    _project!.scenes.addAll(loadedScenes);
   }
+
+  // --- ARQUIVOS E NAVEGAÇÃO ---
 
   Future<void> refreshCurrent() async {
     _entries = [];
@@ -148,7 +155,6 @@ class ProjectStore extends ChangeNotifier {
     await refreshCurrent();
   }
 
-  /// Create a lookup map of id->GameObject for the whole project
   Map<String, GameObject> _createObjectLookup() {
     final map = <String, GameObject>{};
     if (_project == null) return map;
@@ -160,20 +166,20 @@ class ProjectStore extends ChangeNotifier {
       }
     }
 
+    // Lookup global em todas as cenas carregadas
     for (final scene in _project!.scenes) {
       traverse(scene.rootObjects);
     }
     return map;
   }
 
-  // --- SCENE OPERATIONS ---
+  // --- OPERAÇÕES DE CENA ---
 
   void selectScene(String sceneId) {
     if (_project == null) return;
     final scene = _project!.scenes.firstWhere((s) => s.id == sceneId,
         orElse: () => _project!.scenes.first);
     if (_currentScene != scene) {
-      // Limpa seleção ao trocar de cena para evitar erros de referência
       SelectionStore.instance.clear();
       _currentScene = scene;
       notifyListeners();
@@ -188,6 +194,10 @@ class ProjectStore extends ChangeNotifier {
         rootObjects: []);
     _project!.scenes.add(newScene);
     _currentScene = newScene;
+    
+    // Salva imediatamente para criar o arquivo no disco
+    saveProject(); 
+    
     SelectionStore.instance.clear();
     notifyListeners();
   }
@@ -197,12 +207,8 @@ class ProjectStore extends ChangeNotifier {
     try {
       final original = _project!.scenes.firstWhere((s) => s.id == sceneId);
 
-      // Deep clone objects
       final clonedObjects = original.rootObjects
-          .map((obj) => _deepCloneGameObject(obj, null,
-                  isRootClone:
-                      false) // false pois queremos manter nomes originais, só IDs novos
-              )
+          .map((obj) => _deepCloneGameObject(obj, null, isRootClone: false))
           .toList();
 
       final clone = Scene(
@@ -212,18 +218,31 @@ class ProjectStore extends ChangeNotifier {
 
       _project!.scenes.add(clone);
       _currentScene = clone;
+      
+      saveProject(); // Persiste a nova cena
+
       SelectionStore.instance.clear();
       notifyListeners();
     } catch (_) {}
   }
 
   void deleteScene(String sceneId) {
-    if (_project == null || _project!.scenes.length <= 1)
-      return; // Prevent deleting last scene
+    if (_project == null || _project!.scenes.length <= 1) return;
 
-    _project!.scenes.removeWhere((s) => s.id == sceneId);
+    final sceneToDelete = _project!.scenes.firstWhere((s) => s.id == sceneId);
+    
+    // Remove do disco
+    if (_projectPath != null) {
+        final safeName = _sanitizeFilename(sceneToDelete.name);
+        final filename = safeName.isEmpty ? sceneToDelete.id : safeName;
+        final file = File(p.join(_projectPath!, 'scenes', '$filename.json'));
+        if (file.existsSync()) {
+            try { file.deleteSync(); } catch (_) {}
+        }
+    }
 
-    // Se deletou a cena atual, muda para a primeira disponível
+    _project!.scenes.remove(sceneToDelete);
+
     if (_currentScene?.id == sceneId) {
       _currentScene = _project!.scenes.first;
       SelectionStore.instance.clear();
@@ -234,7 +253,21 @@ class ProjectStore extends ChangeNotifier {
   void renameScene(String sceneId, String newName) {
     if (_project == null) return;
     final scene = _project!.scenes.firstWhere((s) => s.id == sceneId);
+    
+    // Precisamos deletar o arquivo antigo se o nome mudar (pois o nome define o arquivo)
+    // Ou manter ID como nome do arquivo para evitar isso. 
+    // Na lógica atual (_sanitizeFilename), mudar nome muda arquivo.
+    if (_projectPath != null) {
+       final oldSafeName = _sanitizeFilename(scene.name);
+       final oldFilename = oldSafeName.isEmpty ? scene.id : oldSafeName;
+       final oldFile = File(p.join(_projectPath!, 'scenes', '$oldFilename.json'));
+       if (oldFile.existsSync()) {
+           try { oldFile.deleteSync(); } catch (_) {}
+       }
+    }
+
     scene.name = newName;
+    saveProject(); // Salva para criar o arquivo com novo nome
     notifyListeners();
   }
 
@@ -250,23 +283,30 @@ class ProjectStore extends ChangeNotifier {
 
   String _sanitizeFilename(String name) {
     return name
-        .replaceAll(RegExp(r'[^\w\s\-]'), '') // Remove chars especiais
-        .replaceAll(RegExp(r'\s+'), '_') // Espaços para _
+        .replaceAll(RegExp(r'[^\w\s\-]'), '')
+        .replaceAll(RegExp(r'\s+'), '_')
         .toLowerCase();
   }
 
-  // --- SAVE LOGIC ---
+  // --- SAVE LOGIC (CORRIGIDO) ---
 
   Future<void> saveProject() async {
     if (_project == null || _projectPath == null) return;
 
-    // 1. Salvar o arquivo principal do projeto (.o3m)
+    // 1. Salvar o arquivo project.o3m (MANIFESTO)
+    // O truque: Criamos o JSON e forçamos 'scenes' a ser uma lista vazia.
+    // Isso mantém o arquivo válido para o parser (que exige a chave), 
+    // mas não salva dados duplicados.
     final projectFile = File(p.join(_projectPath!, _projectFileName));
+    
+    final projectJson = _project!.toJson();
+    projectJson['scenes'] = []; // <--- AQUI ESTÁ A MÁGICA: Manifesto limpo.
+
     final projectEncoded =
-        const JsonEncoder.withIndent('  ').convert(_project!.toJson());
+        const JsonEncoder.withIndent('  ').convert(projectJson);
     await projectFile.writeAsString(projectEncoded);
 
-    // 2. Salvar cada cena em um arquivo separado na pasta 'scenes'
+    // 2. Salvar cada cena individualmente
     final scenesDir = Directory(p.join(_projectPath!, 'scenes'));
     if (!await scenesDir.exists()) {
       await scenesDir.create(recursive: true);
@@ -274,7 +314,6 @@ class ProjectStore extends ChangeNotifier {
 
     for (final scene in _project!.scenes) {
       final safeName = _sanitizeFilename(scene.name);
-      // Fallback para ID se nome ficar vazio
       final filename = safeName.isEmpty ? scene.id : safeName;
       final sceneFile = File(p.join(scenesDir.path, '$filename.json'));
 
@@ -284,12 +323,11 @@ class ProjectStore extends ChangeNotifier {
     }
   }
 
-  // --- OBJECT OPERATIONS (Updated to use _currentScene) ---
+  // --- OBJECT OPERATIONS ---
 
   Future<void> addAssetAsGameObject(String absolutePath) async {
     if (_project == null || _projectPath == null) return;
 
-    // Ensure we have a scene
     if (_currentScene == null) {
       if (_project!.scenes.isEmpty)
         createScene();
@@ -324,7 +362,6 @@ class ProjectStore extends ChangeNotifier {
       components: [transformComp, mesh],
     );
 
-    // Adiciona na cena atual
     _currentScene!.rootObjects.add(go);
 
     final exists = _project!.assets.any((a) => a.path == rel);
@@ -356,13 +393,9 @@ class ProjectStore extends ChangeNotifier {
       return false;
     }
 
-    // Procura em todas as cenas para garantir consistência,
-    // embora a UI só mostre a atual
-    for (final scene in _project!.scenes) {
-      if (_replaceInList(scene.rootObjects)) {
-        replaced = true;
-        break;
-      }
+    // Atualiza apenas na cena atual (performance e lógica correta)
+    if (_currentScene != null) {
+        replaced = _replaceInList(_currentScene!.rootObjects);
     }
 
     if (replaced) notifyListeners();
@@ -386,11 +419,8 @@ class ProjectStore extends ChangeNotifier {
       return false;
     }
 
-    for (final scene in _project!.scenes) {
-      if (_removeInList(scene.rootObjects)) {
-        deleted = true;
-        break;
-      }
+    if (_currentScene != null) {
+        deleted = _removeInList(_currentScene!.rootObjects);
     }
 
     if (deleted && notify) {
@@ -402,20 +432,19 @@ class ProjectStore extends ChangeNotifier {
   GameObject? findGameObjectById(String id) {
     if (_project == null) return null;
 
-    for (final scene in _project!.scenes) {
-      GameObject? findInList(List<GameObject> list) {
-        for (final obj in list) {
-          if (obj.id == id) return obj;
-          if (obj.children.isNotEmpty) {
-            final found = findInList(obj.children);
-            if (found != null) return found;
-          }
+    // Busca apenas na cena atual
+    if (_currentScene != null) {
+        GameObject? findInList(List<GameObject> list) {
+            for (final obj in list) {
+                if (obj.id == id) return obj;
+                if (obj.children.isNotEmpty) {
+                    final found = findInList(obj.children);
+                    if (found != null) return found;
+                }
+            }
+            return null;
         }
-        return null;
-      }
-
-      final found = findInList(scene.rootObjects);
-      if (found != null) return found;
+        return findInList(_currentScene!.rootObjects);
     }
     return null;
   }
@@ -426,9 +455,7 @@ class ProjectStore extends ChangeNotifier {
     final clone =
         _deepCloneGameObject(original, original.parentId, isRootClone: true);
 
-    // Adiciona na cena onde o original está, ou na cena atual
     if (original.parentId == null) {
-      // Se era root, clonamos na root da cena atual (simplificação)
       _currentScene!.rootObjects.add(clone);
     } else {
       final parent = findGameObjectById(original.parentId!);
@@ -446,7 +473,6 @@ class ProjectStore extends ChangeNotifier {
   void createEmpty({String? parentId}) {
     if (_project == null) return;
 
-    // Garante cena
     if (_currentScene == null) {
       if (_project!.scenes.isEmpty)
         createScene();
@@ -482,7 +508,6 @@ class ProjectStore extends ChangeNotifier {
     if (_project == null || _currentScene == null) return;
     if (childId == newParentId) return;
 
-    // 1. Validar descendência
     if (newParentId != null) {
       final child = findGameObjectById(childId);
       if (child != null) {
@@ -493,12 +518,10 @@ class ProjectStore extends ChangeNotifier {
           }
           return false;
         }
-
         if (_isDescendant(child, newParentId)) return;
       }
     }
 
-    // 2. Preparar lookup e encontrar objetos
     final objectLookup = _createObjectLookup();
     final originalObj = objectLookup[childId];
     if (originalObj == null) return;
@@ -508,12 +531,10 @@ class ProjectStore extends ChangeNotifier {
         : null;
     final newParent = newParentId != null ? objectLookup[newParentId] : null;
 
-    // 3. Processar componentes para permitir que cada um ajuste seus dados
     final newComponents = originalObj.components.map((comp) {
       return comp.onReparent(originalObj, oldParent, newParent, objectLookup);
     }).toList();
 
-    // 4. Criar o objeto atualizado com novos componentes
     final movedObj = GameObject(
       id: originalObj.id,
       name: originalObj.name,
@@ -522,19 +543,16 @@ class ProjectStore extends ChangeNotifier {
       children: originalObj.children,
     );
 
-    // 5. Remover da árvore antiga e adicionar na nova
     bool removed = deleteGameObject(childId, notify: false);
     if (!removed) return;
 
     if (newParentId == null) {
-      // Move para a root da cena ATUAL
       _currentScene!.rootObjects.add(movedObj);
     } else {
       final parentInTree = findGameObjectById(newParentId);
       if (parentInTree != null) {
         parentInTree.children.add(movedObj);
       } else {
-        // Fallback
         _currentScene!.rootObjects.add(movedObj);
       }
     }
@@ -547,7 +565,6 @@ class ProjectStore extends ChangeNotifier {
     final newId = const Uuid().v4();
     final newName = isRootClone ? '${source.name} (Clone)' : source.name;
 
-    // Clone components via their copyWith
     final newComponents = source.components.map((c) => c.copyWith()).toList();
 
     return GameObject(
